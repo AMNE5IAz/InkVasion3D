@@ -99,6 +99,21 @@
       transition: width 120ms linear;
     }
 
+    .special-bar {
+      width: min(150px, 20vw);
+    }
+
+    .special-fill {
+      width: 0%;
+      background: repeating-linear-gradient(
+        -12deg,
+        #111,
+        #111 8px,
+        #4b3a85 8px,
+        #4b3a85 12px
+      );
+    }
+
     #message {
       position: fixed;
       left: 50%;
@@ -225,15 +240,17 @@
       <span class="stat">Health</span>
       <div class="bar" aria-hidden="true"><div id="healthFill" class="bar-fill"></div></div>
       <span id="healthText" class="stat">100</span>
+      <span class="stat">Splash</span>
+      <div class="bar special-bar" aria-hidden="true"><div id="specialFill" class="bar-fill special-fill"></div></div>
     </div>
     <div class="hud-panel center">
       <span id="levelName" class="stat">Loading page...</span>
     </div>
     <div class="hud-panel right">
       <span id="enemyText" class="stat">Enemies 0</span>
-      <span class="stat">WASD Move</span>
-      <span class="stat">Q/E Turret</span>
-      <span class="stat">Space Fire</span>
+      <span id="modeText" class="stat">Mode Deathmatch</span>
+      <span class="stat">Hold Space: Splash</span>
+      <span class="stat">M Mode</span>
     </div>
   </section>
 
@@ -269,7 +286,7 @@
     const keys = new Set();
     const tmpVec = new THREE.Vector3();
     const tmpVec2 = new THREE.Vector3();
-    const arenaBounds = { minX: -22, maxX: 22, minZ: -14, maxZ: 14 };
+    const arenaBounds = { minX: -42, maxX: 42, minZ: -28, maxZ: 28 };
 
     const palette = {
       paper: 0xf5f0df,
@@ -282,64 +299,79 @@
       graphite: 0x4f4b44
     };
 
+    const gameModes = ["Deathmatch", "Team Deathmatch", "Capture The Flag", "Control Points"];
+
+    const tankArchetypes = {
+      striker: { label: "Striker", maxHealth: 100, maxSpeed: 8.5, acceleration: 15, turnSpeed: 2.25, turretTurnSpeed: 3.8, fireDelay: 0.46, damage: 18, bodyScale: [1, 1, 1] },
+      scout: { label: "Scout", maxHealth: 75, maxSpeed: 10.8, acceleration: 18, turnSpeed: 2.65, turretTurnSpeed: 4.2, fireDelay: 0.34, damage: 13, bodyScale: [0.88, 0.9, 0.9] },
+      heavy: { label: "Heavy", maxHealth: 145, maxSpeed: 6.0, acceleration: 10, turnSpeed: 1.55, turretTurnSpeed: 2.7, fireDelay: 0.8, damage: 30, bodyScale: [1.22, 1.12, 1.18] },
+      rail: { label: "Rail", maxHealth: 85, maxSpeed: 7.4, acceleration: 12, turnSpeed: 1.9, turretTurnSpeed: 3.1, fireDelay: 1.15, damage: 42, bodyScale: [0.96, 0.95, 1.05] }
+    };
+
     const levels = [
       {
-        name: "Open Fields",
-        player: [-15, -1],
-        enemies: [[12, -7], [14, 6], [4, 8]],
+        name: "Ink Wastes",
+        mode: "Deathmatch",
+        player: [-34, -18],
+        enemies: [[27, -20, "scout"], [30, 17, "heavy"], [4, 22, "rail"], [-14, 10, "striker"], [16, -4, "scout"]],
+        objectives: [{ type: "point", x: 0, z: 0, r: 3.6 }],
         obstacles: [
-          { x: 0, z: 0, w: 7, d: 4, h: 2.4 },
-          { x: -8, z: 8, w: 5, d: 2, h: 1.8 },
-          { x: 8, z: -8, w: 5, d: 2, h: 1.8 }
+          { x: -12, z: -10, w: 11, d: 5, h: 2.2 }, { x: 11, z: 8, w: 14, d: 4, h: 2.8 },
+          { x: -29, z: 8, w: 6, d: 14, h: 2.6 }, { x: 29, z: -7, w: 7, d: 16, h: 2.6 },
+          { x: 0, z: -23, w: 18, d: 3, h: 2.1 }, { x: -2, z: 23, w: 18, d: 3, h: 2.1 },
+          { x: 0, z: 0, w: 6, d: 6, h: 1.4 }
         ]
       },
       {
-        name: "Urban Ruins",
-        player: [-16, 9],
-        enemies: [[15, -9], [2, 0], [14, 8], [-6, -8]],
+        name: "Folded City",
+        mode: "Team Deathmatch",
+        player: [-35, 20],
+        enemies: [[35, -20, "heavy"], [23, -4, "striker"], [10, 18, "scout"], [-4, -18, "rail"], [34, 14, "scout"], [-22, -4, "striker"]],
+        allies: [[-30, 8, "scout"], [-18, 20, "heavy"]],
         obstacles: [
-          { x: -8, z: 1, w: 3, d: 14, h: 2.8 },
-          { x: 3, z: -1, w: 3, d: 14, h: 2.8 },
-          { x: 12, z: 4, w: 3, d: 8, h: 2.8 },
-          { x: -1, z: 9, w: 9, d: 2, h: 2.2 },
-          { x: -15, z: -6, w: 6, d: 2, h: 2.2 }
+          { x: -25, z: 0, w: 5, d: 38, h: 3.2 }, { x: -8, z: -7, w: 5, d: 30, h: 3.2 },
+          { x: 8, z: 7, w: 5, d: 30, h: 3.2 }, { x: 25, z: 0, w: 5, d: 38, h: 3.2 },
+          { x: 0, z: -24, w: 20, d: 3, h: 2.4 }, { x: 0, z: 24, w: 20, d: 3, h: 2.4 },
+          { x: -16, z: 13, w: 12, d: 3, h: 2.2 }, { x: 16, z: -13, w: 12, d: 3, h: 2.2 }
         ]
       },
       {
-        name: "Mountain Pass",
-        player: [-17, 0],
-        enemies: [[16, 0], [8, -7], [8, 7]],
+        name: "Blot Flag Basin",
+        mode: "Capture The Flag",
+        player: [-36, 0],
+        enemies: [[35, 0, "heavy"], [28, -17, "scout"], [28, 17, "scout"], [8, 18, "rail"], [8, -18, "striker"]],
+        allies: [[-27, -15, "scout"], [-27, 15, "striker"]],
+        flags: { blue: [-36, 0], red: [36, 0] },
         obstacles: [
-          { x: -5, z: -7, w: 26, d: 2, h: 3 },
-          { x: 5, z: 7, w: 26, d: 2, h: 3 },
-          { x: -12, z: 6, w: 5, d: 2, h: 2.2 },
-          { x: 12, z: -6, w: 5, d: 2, h: 2.2 }
+          { x: -17, z: -18, w: 18, d: 3, h: 2.5 }, { x: -17, z: 18, w: 18, d: 3, h: 2.5 },
+          { x: 17, z: -18, w: 18, d: 3, h: 2.5 }, { x: 17, z: 18, w: 18, d: 3, h: 2.5 },
+          { x: 0, z: -7, w: 5, d: 18, h: 3 }, { x: 0, z: 18, w: 5, d: 12, h: 3 },
+          { x: -31, z: 0, w: 4, d: 10, h: 2 }, { x: 31, z: 0, w: 4, d: 10, h: 2 }
         ]
       },
       {
-        name: "Corridor Lanes",
-        player: [-17, -10],
-        enemies: [[16, 10], [16, 0], [2, -1], [-4, 10]],
+        name: "Three Point Spillway",
+        mode: "Control Points",
+        player: [-33, -20],
+        enemies: [[33, 20, "heavy"], [24, -4, "rail"], [6, 23, "scout"], [-11, 8, "striker"], [31, -21, "scout"], [-30, 17, "heavy"]],
+        allies: [[-24, -6, "scout"], [-18, -21, "striker"]],
+        objectives: [{ type: "point", x: -22, z: 0, r: 4 }, { type: "point", x: 0, z: 0, r: 4 }, { type: "point", x: 22, z: 0, r: 4 }],
         obstacles: [
-          { x: -8, z: 0, w: 2, d: 22, h: 2.6 },
-          { x: 4, z: 0, w: 2, d: 22, h: 2.6 },
-          { x: 14, z: -5, w: 2, d: 14, h: 2.6 },
-          { x: -16, z: 5, w: 2, d: 14, h: 2.6 }
+          { x: -32, z: 0, w: 5, d: 28, h: 2.7 }, { x: 32, z: 0, w: 5, d: 28, h: 2.7 },
+          { x: 0, z: -22, w: 42, d: 4, h: 2.4 }, { x: 0, z: 22, w: 42, d: 4, h: 2.4 },
+          { x: -12, z: -6, w: 5, d: 12, h: 2.5 }, { x: 12, z: 6, w: 5, d: 12, h: 2.5 },
+          { x: 0, z: 0, w: 7, d: 7, h: 1.5 }
         ]
-      },
-      {
-        name: "Blank Training Page",
-        player: [-15, 0],
-        enemies: [[10, -6], [13, 5]],
-        obstacles: []
       }
     ];
 
     const ui = {
       root: document.getElementById("game"),
       healthFill: document.getElementById("healthFill"),
+      specialFill: document.getElementById("specialFill"),
       healthText: document.getElementById("healthText"),
       enemyText: document.getElementById("enemyText"),
+      modeText: document.getElementById("modeText"),
       levelName: document.getElementById("levelName"),
       message: document.getElementById("message"),
       overlay: document.getElementById("overlay"),
@@ -479,9 +511,10 @@
     }
 
     class TankController {
-      constructor({ scene, position, team, color, wash, isPlayer = false, game }) {
+      constructor({ scene, position, team, color, wash, isPlayer = false, game, archetype = "striker" }) {
         this.scene = scene;
         this.team = team;
+        this.archetype = tankArchetypes[archetype] || tankArchetypes.striker;
         this.color = color;
         this.wash = wash;
         this.isPlayer = isPlayer;
@@ -492,13 +525,14 @@
         this.turretHeading = this.heading;
         this.speed = 0;
         this.radius = 1.1;
-        this.maxSpeed = isPlayer ? 8.5 : 5.3;
-        this.acceleration = isPlayer ? 16 : 10;
-        this.turnSpeed = isPlayer ? 2.7 : 1.8;
-        this.turretTurnSpeed = isPlayer ? 3.8 : 2.6;
+        this.maxSpeed = this.archetype.maxSpeed * (isPlayer ? 1 : 0.82);
+        this.acceleration = this.archetype.acceleration * (isPlayer ? 1 : 0.8);
+        this.turnSpeed = this.archetype.turnSpeed;
+        this.turretTurnSpeed = this.archetype.turretTurnSpeed;
         this.fireCooldown = 0;
-        this.fireDelay = isPlayer ? 0.42 : 0.95;
-        this.health = new TankHealth(isPlayer ? 100 : 55, () => this.destroy());
+        this.fireDelay = this.archetype.fireDelay * (isPlayer ? 1 : 1.25);
+        this.damage = this.archetype.damage;
+        this.health = new TankHealth(this.archetype.maxHealth * (isPlayer ? 1 : 0.7), () => this.destroy());
         this.buildMesh();
         scene.add(this.group);
       }
@@ -508,21 +542,22 @@
         const inkMat = makeMaterial(this.color);
         const darkMat = makeMaterial(0x201f1c);
 
-        const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 2.5), bodyMat);
+        const scale = this.archetype.bodyScale;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.8 * scale[0], 0.65 * scale[1], 2.5 * scale[2]), bodyMat);
         body.position.y = 0.45;
         body.castShadow = true;
         addEdges(body);
         this.group.add(body);
 
-        const nose = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.46, 0.72), inkMat);
+        const nose = new THREE.Mesh(new THREE.BoxGeometry(1.35 * scale[0], 0.46 * scale[1], 0.72 * scale[2]), inkMat);
         nose.position.set(0, 0.6, -0.88);
         nose.castShadow = true;
         addEdges(nose);
         this.group.add(nose);
 
         for (const x of [-1.05, 1.05]) {
-          const track = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.4, 2.75), darkMat);
-          track.position.set(x, 0.28, 0);
+          const track = new THREE.Mesh(new THREE.BoxGeometry(0.34 * scale[0], 0.4 * scale[1], 2.75 * scale[2]), darkMat);
+          track.position.set(x * scale[0], 0.28, 0);
           track.castShadow = true;
           addEdges(track, palette.ink);
           this.group.add(track);
@@ -535,14 +570,15 @@
         addEdges(base);
         this.turret.add(base);
 
-        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, 1.95), inkMat);
-        barrel.position.set(0, 0.03, -1.1);
+        const barrelLength = this.archetype.label === "Rail" ? 2.65 : this.archetype.label === "Heavy" ? 1.75 : 1.95;
+        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, barrelLength), inkMat);
+        barrel.position.set(0, 0.03, -barrelLength * 0.55);
         barrel.castShadow = true;
         addEdges(barrel);
         this.turret.add(barrel);
 
         this.muzzle = new THREE.Object3D();
-        this.muzzle.position.set(0, 0.03, -2.12);
+        this.muzzle.position.set(0, 0.03, -barrelLength - 0.18);
         this.turret.add(this.muzzle);
         this.group.add(this.turret);
 
@@ -601,12 +637,12 @@
         return Math.abs(diff);
       }
 
-      fire(ownerTeam) {
-        if (this.fireCooldown > 0 || this.health.dead) return false;
+      fire(ownerTeam, special = false) {
+        if ((!special && this.fireCooldown > 0) || this.health.dead) return false;
         this.muzzle.getWorldPosition(tmpVec);
         const direction = new THREE.Vector3(-Math.sin(this.turretHeading), 0, -Math.cos(this.turretHeading));
-        this.game.spawnProjectile(tmpVec.clone(), direction, ownerTeam);
-        this.fireCooldown = this.fireDelay;
+        this.game.spawnProjectile(tmpVec.clone(), direction, ownerTeam, special, this.damage);
+        this.fireCooldown = special ? Math.max(this.fireCooldown, 0.35) : this.fireDelay;
         return true;
       }
 
@@ -626,7 +662,11 @@
 
       update(dt) {
         if (this.tank.health.dead || this.game.player.health.dead) return;
-        const player = this.game.player;
+        const targetTank = this.tank.team === "ally"
+          ? this.game.closestLivingEnemy(this.tank.group.position)
+          : this.game.player;
+        if (!targetTank) return;
+        const player = targetTank;
         const enemyPos = this.tank.group.position;
         const playerPos = player.group.position;
         const distance = enemyPos.distanceTo(playerPos);
@@ -638,7 +678,7 @@
           const turn = clamp(angleDiff(targetAngle, this.tank.heading), -1, 1);
           const throttle = distance > 8 ? 0.8 : distance < 5 ? -0.35 : 0;
           this.tank.move(dt, throttle, turn);
-          if (distance < 15 && aimError < 0.16) this.tank.fire("enemy");
+          if (distance < 24 && aimError < 0.16) this.tank.fire("enemy");
         } else {
           this.stateTimer -= dt;
           if (this.stateTimer <= 0) {
@@ -663,22 +703,34 @@
     }
 
     class Projectile {
-      constructor({ scene, position, direction, owner, game }) {
+      constructor({ scene, position, direction, owner, game, special = false, damage = 18 }) {
         this.scene = scene;
         this.owner = owner;
         this.game = game;
         this.position = position.clone();
         this.direction = direction.clone().normalize();
-        this.speed = 18;
-        this.damage = 18;
-        this.radius = 0.22;
-        this.life = 2.4;
-        this.mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(this.radius, 14, 10),
+        this.special = special;
+        this.speed = special ? 13 : 20;
+        this.damage = special ? 48 : damage;
+        this.radius = special ? 0.72 : 0.25;
+        this.splashRadius = special ? 5.2 : 0;
+        this.life = special ? 3.2 : 2.6;
+        const projectileGroup = new THREE.Group();
+        const drop = new THREE.Mesh(
+          new THREE.SphereGeometry(this.radius, 18, 12),
           makeMaterial(owner === "player" ? palette.blue : palette.red, 0.55)
         );
+        drop.scale.set(1, 0.72, special ? 1.55 : 1.15);
+        const tail = new THREE.Mesh(
+          new THREE.ConeGeometry(this.radius * 0.7, special ? 2.2 : 1.1, 16),
+          makeMaterial(owner === "player" ? palette.blue : palette.red, 0.7)
+        );
+        tail.rotation.x = Math.PI / 2;
+        tail.position.z = special ? 1.2 : 0.72;
+        projectileGroup.add(drop, tail);
+        this.mesh = projectileGroup;
         this.mesh.position.copy(this.position);
-        this.mesh.castShadow = true;
+        this.mesh.traverse((child) => { if (child.isMesh) child.castShadow = true; });
         scene.add(this.mesh);
       }
 
@@ -710,7 +762,7 @@
         for (const target of targets) {
           if (target.health.dead) continue;
           if (this.position.distanceTo(target.group.position) < target.radius + this.radius) {
-            target.health.damage(this.damage);
+            this.hitTarget(target);
             this.dispose(true);
             return false;
           }
@@ -718,12 +770,28 @@
         return true;
       }
 
+      hitTarget(primaryTarget) {
+        primaryTarget.health.damage(this.damage);
+        if (this.special) {
+          const targetList = this.owner === "player" ? this.game.enemies.map((enemy) => enemy.tank) : [this.game.player, ...this.game.allies.map((ally) => ally.tank)];
+          for (const target of targetList) {
+            if (target === primaryTarget || target.health.dead) continue;
+            const dist = this.position.distanceTo(target.group.position);
+            if (dist <= this.splashRadius) target.health.damage(Math.round(this.damage * (1 - dist / this.splashRadius) * 0.75));
+          }
+          this.game.showMessage("Full ink splash landed!");
+        }
+      }
+
       dispose(makeSplatter) {
         this.scene.remove(this.mesh);
-        this.mesh.geometry.dispose();
-        this.mesh.material.dispose();
+        this.mesh.traverse((child) => {
+          if (!child.isMesh) return;
+          child.geometry.dispose();
+          child.material.dispose();
+        });
         if (makeSplatter) {
-          this.game.spawnSplatter(this.position, this.owner === "player" ? palette.blue : palette.red, 1.2);
+          this.game.spawnSplatter(this.position, this.owner === "player" ? palette.blue : palette.red, this.special ? 4.8 : 1.4);
         }
       }
     }
@@ -741,7 +809,14 @@
         this.projectiles = [];
         this.obstacles = [];
         this.enemies = [];
+        this.allies = [];
         this.splatters = [];
+        this.objectives = [];
+        this.flags = {};
+        this.modeIndex = 0;
+        this.teamScore = { blue: 0, red: 0 };
+        this.specialCharge = 0;
+        this.spaceHeld = false;
         this.gameOver = false;
         this.messageTimer = 0;
         this.setupScene();
@@ -792,10 +867,10 @@
 
         const borderMat = makeMaterial(palette.ink);
         const borderPieces = [
-          [0, arenaBounds.minZ - 0.35, 45, 0.7],
-          [0, arenaBounds.maxZ + 0.35, 45, 0.7],
-          [arenaBounds.minX - 0.35, 0, 0.7, 29],
-          [arenaBounds.maxX + 0.35, 0, 0.7, 29]
+          [0, arenaBounds.minZ - 0.35, arenaBounds.maxX - arenaBounds.minX + 1.4, 0.7],
+          [0, arenaBounds.maxZ + 0.35, arenaBounds.maxX - arenaBounds.minX + 1.4, 0.7],
+          [arenaBounds.minX - 0.35, 0, 0.7, arenaBounds.maxZ - arenaBounds.minZ + 1.4],
+          [arenaBounds.maxX + 0.35, 0, 0.7, arenaBounds.maxZ - arenaBounds.minZ + 1.4]
         ];
         for (const [x, z, w, d] of borderPieces) {
           const border = new THREE.Mesh(new THREE.BoxGeometry(w, 0.6, d), borderMat);
@@ -818,6 +893,7 @@
           if (event.code === "KeyR") this.loadLevel(this.levelIndex);
           if (event.code === "KeyN") this.loadLevel(this.levelIndex + 1);
           if (event.code === "KeyP") this.loadLevel(this.levelIndex - 1);
+          if (event.code === "KeyM") this.cycleMode();
         });
         document.addEventListener("keyup", (event) => keys.delete(event.code));
         ui.restartButton.addEventListener("click", () => this.loadLevel(this.levelIndex));
@@ -831,6 +907,9 @@
         for (const enemy of this.enemies) this.scene.remove(enemy.tank.group);
         this.enemies = [];
 
+        for (const ally of this.allies) this.scene.remove(ally.tank.group);
+        this.allies = [];
+
         if (this.player) this.scene.remove(this.player.group);
 
         for (const obstacle of this.obstacles) {
@@ -839,6 +918,11 @@
           obstacle.mesh.material.dispose();
         }
         this.obstacles = [];
+
+        for (const objective of this.objectives) this.scene.remove(objective.mesh);
+        this.objectives = [];
+        for (const flag of Object.values(this.flags)) this.scene.remove(flag);
+        this.flags = {};
 
         for (const splatter of this.splatters) {
           this.scene.remove(splatter);
@@ -854,7 +938,11 @@
         ui.overlay.classList.remove("visible");
         this.levelIndex = (index + levels.length) % levels.length;
         const level = new LevelDefinition(levels[this.levelIndex]);
+        this.currentMode = gameModes.includes(level.mode) ? level.mode : gameModes[this.modeIndex];
         ui.levelName.textContent = `Page ${this.levelIndex + 1}: ${level.name}`;
+        ui.modeText.textContent = `Mode ${this.currentMode}`;
+        this.teamScore = { blue: 0, red: 0 };
+        this.specialCharge = 0;
 
         for (const def of level.obstacles) {
           const mesh = new THREE.Mesh(
@@ -884,33 +972,93 @@
           color: palette.blue,
           wash: palette.blueWash,
           isPlayer: true,
-          game: this
+          game: this,
+          archetype: "striker"
         });
 
-        for (const position of level.enemies) {
+        for (const enemyDef of level.enemies) {
+          const position = [enemyDef[0], enemyDef[1]];
           const tank = new TankController({
             scene: this.scene,
             position,
             team: "enemy",
             color: palette.red,
             wash: palette.redWash,
-            game: this
+            game: this,
+            archetype: enemyDef[2] || "striker"
           });
           this.enemies.push(new EnemyTankAI(tank, this));
         }
+
+        for (const allyDef of level.allies || []) {
+          const tank = new TankController({
+            scene: this.scene,
+            position: [allyDef[0], allyDef[1]],
+            team: "ally",
+            color: palette.blue,
+            wash: palette.blueWash,
+            game: this,
+            archetype: allyDef[2] || "scout"
+          });
+          this.allies.push(new EnemyTankAI(tank, this));
+        }
+
+        this.createObjectives(level);
 
         this.showMessage(`Sketchbook page ${this.levelIndex + 1}: erase ${this.enemies.length} hostile ink tanks.`);
         this.updateHUD();
       }
 
-      spawnProjectile(position, direction, owner) {
+      spawnProjectile(position, direction, owner, special = false, damage = 18) {
         this.projectiles.push(new Projectile({
           scene: this.scene,
           position,
           direction,
           owner,
-          game: this
+          game: this,
+          special,
+          damage
         }));
+      }
+
+      closestLivingEnemy(position) {
+        let closest = null;
+        let closestDistance = Infinity;
+        for (const enemy of this.enemies) {
+          if (enemy.tank.health.dead) continue;
+          const dist = enemy.tank.group.position.distanceTo(position);
+          if (dist < closestDistance) {
+            closest = enemy.tank;
+            closestDistance = dist;
+          }
+        }
+        return closest;
+      }
+
+      createObjectives(level) {
+        const pointMat = new THREE.MeshBasicMaterial({ color: palette.blue, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
+        for (const obj of level.objectives || []) {
+          const mesh = new THREE.Mesh(new THREE.CircleGeometry(obj.r, 36), pointMat.clone());
+          mesh.rotation.x = -Math.PI / 2;
+          mesh.position.set(obj.x, 0.025, obj.z);
+          this.scene.add(mesh);
+          this.objectives.push({ ...obj, mesh, owner: null, capture: 0 });
+        }
+        if (level.flags) {
+          for (const [team, pos] of Object.entries(level.flags)) {
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.6, 10), makeMaterial(team === "blue" ? palette.blue : palette.red));
+            pole.position.set(pos[0], 1.3, pos[1]);
+            this.scene.add(pole);
+            this.flags[team] = pole;
+          }
+        }
+      }
+
+      cycleMode() {
+        this.modeIndex = (this.modeIndex + 1) % gameModes.length;
+        this.currentMode = gameModes[this.modeIndex];
+        ui.modeText.textContent = `Mode ${this.currentMode}`;
+        this.showMessage(`Mode switched to ${this.currentMode}.`);
       }
 
       spawnSplatter(position, color, scale) {
@@ -948,31 +1096,61 @@
         if (keys.has("KeyQ") || keys.has("KeyZ")) turret += 1;
         if (keys.has("KeyE") || keys.has("KeyX")) turret -= 1;
 
+        if (throttle === 0) steering = 0;
         this.player.move(dt, throttle, steering);
         this.player.rotateTurret(dt, turret);
-        if (keys.has("Space")) this.player.fire("player");
+
+        const holdingSpace = keys.has("Space");
+        if (holdingSpace) {
+          this.specialCharge = clamp(this.specialCharge + dt * 0.42, 0, 1);
+          if (this.specialCharge >= 1) {
+            this.player.fire("player", true);
+            this.specialCharge = 0;
+            this.spaceHeld = false;
+          }
+        } else if (this.spaceHeld) {
+          if (this.specialCharge < 0.45) this.player.fire("player", false);
+          this.specialCharge = 0;
+        }
+        this.spaceHeld = holdingSpace;
         this.player.update(dt);
       }
 
       updateCamera(dt) {
         const tank = this.player;
-        const back = new THREE.Vector3(Math.sin(tank.heading) * 8.5, 6.4, Math.cos(tank.heading) * 8.5);
+        const back = new THREE.Vector3(Math.sin(tank.heading) * 11.5, 8.2, Math.cos(tank.heading) * 11.5);
         const desired = tank.group.position.clone().add(back);
         desired.y += 2.0;
         this.camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
         tmpVec.copy(tank.group.position);
         tmpVec.y += 1.4;
-        tmpVec.x -= Math.sin(tank.turretHeading) * 2.2;
-        tmpVec.z -= Math.cos(tank.turretHeading) * 2.2;
+        tmpVec.x -= Math.sin(tank.turretHeading) * 3.2;
+        tmpVec.z -= Math.cos(tank.turretHeading) * 3.2;
         this.camera.lookAt(tmpVec);
       }
 
       updateHUD() {
         const health = Math.ceil(this.player?.health.current ?? 0);
         ui.healthText.textContent = `${health}`;
-        ui.healthFill.style.width = `${clamp(health, 0, 100)}%`;
+        const healthPct = this.player ? this.player.health.percent * 100 : 0;
+        ui.healthFill.style.width = `${clamp(healthPct, 0, 100)}%`;
+        ui.specialFill.style.width = `${Math.round(this.specialCharge * 100)}%`;
         const aliveEnemies = this.enemies.filter((enemy) => !enemy.tank.health.dead).length;
         ui.enemyText.textContent = `Enemies ${aliveEnemies}`;
+        ui.modeText.textContent = `Mode ${this.currentMode || "Deathmatch"}`;
+      }
+
+      updateObjectives(dt) {
+        if (this.currentMode !== "Control Points") return;
+        const playerPos = this.player.group.position;
+        for (const objective of this.objectives) {
+          const dist = Math.hypot(playerPos.x - objective.x, playerPos.z - objective.z);
+          if (dist < objective.r) {
+            objective.capture = clamp(objective.capture + dt * 0.45, 0, 1);
+            objective.mesh.material.color.setHex(palette.blue);
+            objective.mesh.material.opacity = 0.18 + objective.capture * 0.28;
+          }
+        }
       }
 
       checkEndState() {
@@ -982,8 +1160,17 @@
           return;
         }
         const aliveEnemies = this.enemies.filter((enemy) => !enemy.tank.health.dead);
+        if (this.currentMode === "Control Points" && this.objectives.length && this.objectives.every((objective) => objective.capture >= 1)) {
+          this.endGame("Victory!", "All ink control points belong to your team.");
+          return;
+        }
+        if (this.currentMode === "Capture The Flag" && this.flags.red && this.player.group.position.distanceTo(this.flags.red.position) < 3.2) {
+          this.endGame("Victory!", "Enemy flag soaked. Bring that one to the scrapbook.");
+          return;
+        }
         if (aliveEnemies.length === 0) {
-          this.endGame("Victory!", "Page cleared. The hostile ink tanks have been erased.");
+          const label = this.currentMode === "Team Deathmatch" ? "Enemy team erased." : "Page cleared. The hostile ink tanks have been erased.";
+          this.endGame("Victory!", label);
         }
       }
 
@@ -1007,7 +1194,9 @@
         if (!this.gameOver) {
           this.updatePlayer(dt);
           for (const enemy of this.enemies) enemy.update(dt);
+          for (const ally of this.allies) ally.update(dt);
           this.projectiles = this.projectiles.filter((projectile) => projectile.update(dt));
+          this.updateObjectives(dt);
           this.checkEndState();
         }
         this.updateCamera(dt);

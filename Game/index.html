@@ -211,6 +211,153 @@
       font-weight: 700;
     }
 
+    #startMenu {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background:
+        linear-gradient(rgba(245, 240, 223, 0.88), rgba(245, 240, 223, 0.78)),
+        repeating-linear-gradient(0deg, rgba(10, 104, 216, 0.12), rgba(10, 104, 216, 0.12) 1px, transparent 1px, transparent 34px);
+      backdrop-filter: blur(5px);
+    }
+
+    #startMenu.hidden {
+      display: none;
+    }
+
+    .menu-shell {
+      width: min(980px, calc(100vw - 28px));
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+      border: 3px solid var(--ink);
+      background: rgba(250, 247, 235, 0.97);
+      box-shadow: 10px 10px 0 rgba(24, 23, 21, 0.18);
+    }
+
+    .menu-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: end;
+      padding: 22px;
+      border-bottom: 2px solid rgba(24, 23, 21, 0.65);
+    }
+
+    .menu-title {
+      margin: 0;
+      font-size: clamp(34px, 8vw, 72px);
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
+    .menu-subtitle {
+      max-width: 360px;
+      margin: 0;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .menu-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 14px 22px 0;
+    }
+
+    .tab-button {
+      min-width: 120px;
+      background: #fff9e9;
+      color: var(--ink);
+    }
+
+    .tab-button.active {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .menu-panel {
+      display: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      padding: 22px;
+    }
+
+    .menu-panel.active {
+      display: grid;
+    }
+
+    .setting-card {
+      border: 2px solid rgba(24, 23, 21, 0.72);
+      background: rgba(255, 251, 238, 0.84);
+      padding: 14px;
+      min-height: 96px;
+      box-shadow: 4px 4px 0 rgba(24, 23, 21, 0.1);
+    }
+
+    .setting-card.wide {
+      grid-column: 1 / -1;
+    }
+
+    label,
+    .setting-title {
+      display: block;
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      border: 2px solid var(--ink);
+      background: #fffdf4;
+      color: var(--ink);
+      padding: 9px 10px;
+      font: 700 15px "Courier New", Courier, monospace;
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .choice {
+      border: 2px solid rgba(24, 23, 21, 0.62);
+      background: #fffdf4;
+      padding: 11px;
+      cursor: pointer;
+      min-height: 108px;
+    }
+
+    .choice.active {
+      border-color: var(--blue);
+      box-shadow: inset 0 0 0 2px rgba(10, 104, 216, 0.25);
+    }
+
+    .choice strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .choice span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .menu-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 0 22px 22px;
+    }
+
     @media (max-width: 740px) {
       #hud {
         grid-template-columns: 1fr;
@@ -228,6 +375,21 @@
 
       .bar {
         width: min(260px, 72vw);
+      }
+
+      .menu-header,
+      .menu-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .menu-subtitle {
+        text-align: left;
+      }
+
+      .menu-panel,
+      .choice-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -271,6 +433,70 @@
     WebGL could not start in this browser. Try a modern desktop browser with hardware acceleration enabled.
   </div>
 
+  <section id="startMenu" aria-label="Inkvasion menu">
+    <div class="menu-shell">
+      <div class="menu-header">
+        <h1 class="menu-title">Inkvasion</h1>
+        <p class="menu-subtitle">Create a sketchbook battle, pick your tank and turret, then roll into a larger arena built for cover, hills, lanes, and ambushes.</p>
+      </div>
+
+      <div class="menu-tabs" role="tablist" aria-label="Menu tabs">
+        <button id="battleTab" class="tab-button active" type="button">Battles</button>
+        <button id="garageTab" class="tab-button" type="button">Garage</button>
+      </div>
+
+      <div id="battlePanel" class="menu-panel active">
+        <div class="setting-card">
+          <label for="modeSelect">Game mode</label>
+          <select id="modeSelect">
+            <option>Deathmatch</option>
+            <option>Team Deathmatch</option>
+            <option>Capture The Flag</option>
+            <option>Control Points</option>
+          </select>
+        </div>
+        <div class="setting-card">
+          <label for="mapSelect">Map</label>
+          <select id="mapSelect">
+            <option value="0">Ink Wastes</option>
+            <option value="1">Folded City</option>
+            <option value="2">Blot Flag Basin</option>
+            <option value="3">Three Point Spillway</option>
+          </select>
+        </div>
+        <div class="setting-card">
+          <label for="enemyCount">Enemy tanks</label>
+          <input id="enemyCount" type="number" min="1" max="12" value="7">
+        </div>
+        <div class="setting-card">
+          <label for="allyCount">Team members</label>
+          <input id="allyCount" type="number" min="0" max="6" value="2">
+        </div>
+        <div class="setting-card wide">
+          <p class="setting-title">Battle shape</p>
+          <p class="menu-subtitle" style="max-width:none;text-align:left">Deathmatch ignores team members. Team modes spawn blue allies and red enemies. Capture The Flag places bases at opposite sides, while Control Points adds capturable ink zones around the map.</p>
+        </div>
+      </div>
+
+      <div id="garagePanel" class="menu-panel">
+        <div class="setting-card wide">
+          <p class="setting-title">Tank hull</p>
+          <div id="tankChoices" class="choice-grid"></div>
+        </div>
+        <div class="setting-card wide">
+          <p class="setting-title">Turret</p>
+          <div id="turretChoices" class="choice-grid"></div>
+        </div>
+      </div>
+
+      <div class="menu-actions">
+        <button id="garageStartButton" class="secondary" type="button">Open Garage</button>
+        <button id="quickJoinButton" class="secondary" type="button">Quick Join</button>
+        <button id="startBattleButton" type="button">Create Battle</button>
+      </div>
+    </div>
+  </section>
+
   <script type="importmap">
     {
       "imports": {
@@ -286,7 +512,7 @@
     const keys = new Set();
     const tmpVec = new THREE.Vector3();
     const tmpVec2 = new THREE.Vector3();
-    const arenaBounds = { minX: -42, maxX: 42, minZ: -28, maxZ: 28 };
+    const arenaBounds = { minX: -70, maxX: 70, minZ: -46, maxZ: 46 };
 
     const palette = {
       paper: 0xf5f0df,
@@ -308,59 +534,77 @@
       rail: { label: "Rail", maxHealth: 85, maxSpeed: 7.4, acceleration: 12, turnSpeed: 1.9, turretTurnSpeed: 3.1, fireDelay: 1.15, damage: 42, bodyScale: [0.96, 0.95, 1.05] }
     };
 
+    const turretTypes = {
+      marker: { label: "Marker", fireDelay: 0.44, damage: 18, projectileScale: 1, splashCharge: 0.42, description: "Balanced ink shots and reliable splash charge." },
+      sprayer: { label: "Sprayer", fireDelay: 0.24, damage: 10, projectileScale: 0.82, splashCharge: 0.55, description: "Fast firing, lighter damage, quickest splash charge." },
+      cannon: { label: "Blot Cannon", fireDelay: 0.86, damage: 34, projectileScale: 1.25, splashCharge: 0.34, description: "Slow heavy ink drops with big hit pressure." },
+      railpen: { label: "Rail Pen", fireDelay: 1.16, damage: 48, projectileScale: 0.78, splashCharge: 0.28, description: "Precise long-range ink punctures." }
+    };
+
     const levels = [
       {
         name: "Ink Wastes",
-        mode: "Deathmatch",
-        player: [-34, -18],
-        enemies: [[27, -20, "scout"], [30, 17, "heavy"], [4, 22, "rail"], [-14, 10, "striker"], [16, -4, "scout"]],
-        objectives: [{ type: "point", x: 0, z: 0, r: 3.6 }],
-        obstacles: [
-          { x: -12, z: -10, w: 11, d: 5, h: 2.2 }, { x: 11, z: 8, w: 14, d: 4, h: 2.8 },
-          { x: -29, z: 8, w: 6, d: 14, h: 2.6 }, { x: 29, z: -7, w: 7, d: 16, h: 2.6 },
-          { x: 0, z: -23, w: 18, d: 3, h: 2.1 }, { x: -2, z: 23, w: 18, d: 3, h: 2.1 },
-          { x: 0, z: 0, w: 6, d: 6, h: 1.4 }
+        player: [-56, -31],
+        enemySpawns: [[50, -32], [55, 28], [12, 36], [-28, 22], [30, -8], [6, -36], [-48, 9], [44, 4], [-8, 30], [21, 20], [-36, -24], [60, -4]],
+        allySpawns: [[-48, -18], [-38, -34], [-54, 3], [-28, -28], [-46, 21], [-20, -38]],
+        objectives: [{ type: "point", x: 0, z: 0, r: 6.5 }, { type: "point", x: -35, z: 19, r: 5.5 }, { type: "point", x: 36, z: -18, r: 5.5 }],
+        flags: { blue: [-58, -32], red: [58, 32] },
+        terrain: [
+          { kind: "wall", x: -23, z: -14, w: 19, d: 5, h: 3.1 }, { kind: "wall", x: 21, z: 12, w: 24, d: 5, h: 3.6 },
+          { kind: "wall", x: -50, z: 13, w: 7, d: 29, h: 3.4 }, { kind: "wall", x: 51, z: -9, w: 8, d: 31, h: 3.4 },
+          { kind: "wall", x: 0, z: -39, w: 34, d: 4, h: 2.8 }, { kind: "wall", x: -5, z: 39, w: 36, d: 4, h: 2.8 },
+          { kind: "hill", x: -7, z: 3, r: 10, h: 3.2 }, { kind: "hill", x: 36, z: 27, r: 8, h: 2.8 },
+          { kind: "ramp", x: -34, z: -34, w: 17, d: 8, h: 2.8, rot: -0.45 }, { kind: "ramp", x: 32, z: -28, w: 15, d: 8, h: 2.5, rot: 0.35 },
+          { kind: "pond", x: 4, z: 28, r: 7 }
         ]
       },
       {
         name: "Folded City",
-        mode: "Team Deathmatch",
-        player: [-35, 20],
-        enemies: [[35, -20, "heavy"], [23, -4, "striker"], [10, 18, "scout"], [-4, -18, "rail"], [34, 14, "scout"], [-22, -4, "striker"]],
-        allies: [[-30, 8, "scout"], [-18, 20, "heavy"]],
-        obstacles: [
-          { x: -25, z: 0, w: 5, d: 38, h: 3.2 }, { x: -8, z: -7, w: 5, d: 30, h: 3.2 },
-          { x: 8, z: 7, w: 5, d: 30, h: 3.2 }, { x: 25, z: 0, w: 5, d: 38, h: 3.2 },
-          { x: 0, z: -24, w: 20, d: 3, h: 2.4 }, { x: 0, z: 24, w: 20, d: 3, h: 2.4 },
-          { x: -16, z: 13, w: 12, d: 3, h: 2.2 }, { x: 16, z: -13, w: 12, d: 3, h: 2.2 }
+        player: [-58, 34],
+        enemySpawns: [[59, -35], [39, -10], [18, 29], [-8, -31], [56, 24], [-34, -7], [4, 5], [28, 38], [61, 3], [-2, -42], [44, -29], [-46, 29]],
+        allySpawns: [[-49, 15], [-31, 34], [-55, -3], [-20, 25], [-42, 39], [-60, 20]],
+        objectives: [{ type: "point", x: -32, z: -4, r: 5.5 }, { type: "point", x: 0, z: 0, r: 5.5 }, { type: "point", x: 32, z: 4, r: 5.5 }],
+        flags: { blue: [-59, 34], red: [59, -34] },
+        terrain: [
+          { kind: "wall", x: -43, z: 0, w: 6, d: 70, h: 4.1 }, { kind: "wall", x: -16, z: -13, w: 6, d: 54, h: 4.2 },
+          { kind: "wall", x: 13, z: 12, w: 6, d: 54, h: 4.2 }, { kind: "wall", x: 43, z: 0, w: 6, d: 70, h: 4.1 },
+          { kind: "wall", x: 0, z: -39, w: 44, d: 5, h: 3.3 }, { kind: "wall", x: 0, z: 39, w: 44, d: 5, h: 3.3 },
+          { kind: "wall", x: -28, z: 22, w: 19, d: 5, h: 3.2 }, { kind: "wall", x: 28, z: -22, w: 19, d: 5, h: 3.2 },
+          { kind: "ramp", x: -7, z: 31, w: 20, d: 8, h: 3, rot: 0.2 }, { kind: "ramp", x: 8, z: -31, w: 20, d: 8, h: 3, rot: -0.2 },
+          { kind: "hill", x: -58, z: -29, r: 9, h: 2.5 }, { kind: "hill", x: 58, z: 29, r: 9, h: 2.5 }
         ]
       },
       {
         name: "Blot Flag Basin",
-        mode: "Capture The Flag",
-        player: [-36, 0],
-        enemies: [[35, 0, "heavy"], [28, -17, "scout"], [28, 17, "scout"], [8, 18, "rail"], [8, -18, "striker"]],
-        allies: [[-27, -15, "scout"], [-27, 15, "striker"]],
-        flags: { blue: [-36, 0], red: [36, 0] },
-        obstacles: [
-          { x: -17, z: -18, w: 18, d: 3, h: 2.5 }, { x: -17, z: 18, w: 18, d: 3, h: 2.5 },
-          { x: 17, z: -18, w: 18, d: 3, h: 2.5 }, { x: 17, z: 18, w: 18, d: 3, h: 2.5 },
-          { x: 0, z: -7, w: 5, d: 18, h: 3 }, { x: 0, z: 18, w: 5, d: 12, h: 3 },
-          { x: -31, z: 0, w: 4, d: 10, h: 2 }, { x: 31, z: 0, w: 4, d: 10, h: 2 }
+        player: [-61, 0],
+        enemySpawns: [[61, 0], [48, -29], [48, 29], [13, 32], [13, -32], [35, 13], [35, -13], [58, 36], [58, -36], [4, 0], [26, 38], [26, -38]],
+        allySpawns: [[-48, -29], [-48, 29], [-36, -12], [-36, 12], [-58, 22], [-58, -22]],
+        objectives: [{ type: "point", x: 0, z: 0, r: 7 }],
+        flags: { blue: [-62, 0], red: [62, 0] },
+        terrain: [
+          { kind: "wall", x: -31, z: -30, w: 30, d: 5, h: 3.2 }, { kind: "wall", x: -31, z: 30, w: 30, d: 5, h: 3.2 },
+          { kind: "wall", x: 31, z: -30, w: 30, d: 5, h: 3.2 }, { kind: "wall", x: 31, z: 30, w: 30, d: 5, h: 3.2 },
+          { kind: "wall", x: 0, z: -12, w: 7, d: 30, h: 4 }, { kind: "wall", x: 0, z: 29, w: 7, d: 22, h: 4 },
+          { kind: "wall", x: -55, z: 0, w: 6, d: 18, h: 2.6 }, { kind: "wall", x: 55, z: 0, w: 6, d: 18, h: 2.6 },
+          { kind: "hill", x: -18, z: 0, r: 9, h: 2.9 }, { kind: "hill", x: 18, z: 0, r: 9, h: 2.9 },
+          { kind: "ramp", x: -3, z: -34, w: 21, d: 8, h: 2.7, rot: 0 }, { kind: "ramp", x: 4, z: 37, w: 21, d: 8, h: 2.7, rot: 0 },
+          { kind: "pond", x: 0, z: 0, r: 8 }
         ]
       },
       {
         name: "Three Point Spillway",
-        mode: "Control Points",
-        player: [-33, -20],
-        enemies: [[33, 20, "heavy"], [24, -4, "rail"], [6, 23, "scout"], [-11, 8, "striker"], [31, -21, "scout"], [-30, 17, "heavy"]],
-        allies: [[-24, -6, "scout"], [-18, -21, "striker"]],
-        objectives: [{ type: "point", x: -22, z: 0, r: 4 }, { type: "point", x: 0, z: 0, r: 4 }, { type: "point", x: 22, z: 0, r: 4 }],
-        obstacles: [
-          { x: -32, z: 0, w: 5, d: 28, h: 2.7 }, { x: 32, z: 0, w: 5, d: 28, h: 2.7 },
-          { x: 0, z: -22, w: 42, d: 4, h: 2.4 }, { x: 0, z: 22, w: 42, d: 4, h: 2.4 },
-          { x: -12, z: -6, w: 5, d: 12, h: 2.5 }, { x: 12, z: 6, w: 5, d: 12, h: 2.5 },
-          { x: 0, z: 0, w: 7, d: 7, h: 1.5 }
+        player: [-57, -34],
+        enemySpawns: [[57, 34], [42, -8], [8, 38], [-18, 16], [54, -35], [-51, 28], [23, 14], [35, 35], [62, 5], [-6, -39], [28, -28], [-35, 5]],
+        allySpawns: [[-42, -14], [-31, -34], [-56, -10], [-20, -28], [-47, 10], [-10, -38]],
+        objectives: [{ type: "point", x: -38, z: 0, r: 6 }, { type: "point", x: 0, z: 0, r: 6 }, { type: "point", x: 38, z: 0, r: 6 }],
+        flags: { blue: [-58, -34], red: [58, 34] },
+        terrain: [
+          { kind: "wall", x: -53, z: 0, w: 7, d: 48, h: 3.6 }, { kind: "wall", x: 53, z: 0, w: 7, d: 48, h: 3.6 },
+          { kind: "wall", x: 0, z: -36, w: 77, d: 6, h: 3.1 }, { kind: "wall", x: 0, z: 36, w: 77, d: 6, h: 3.1 },
+          { kind: "wall", x: -22, z: -10, w: 7, d: 25, h: 3.3 }, { kind: "wall", x: 22, z: 10, w: 7, d: 25, h: 3.3 },
+          { kind: "hill", x: -38, z: 0, r: 10, h: 3.5 }, { kind: "hill", x: 0, z: 0, r: 10, h: 3.5 }, { kind: "hill", x: 38, z: 0, r: 10, h: 3.5 },
+          { kind: "ramp", x: -18, z: 25, w: 24, d: 8, h: 3, rot: 0.35 }, { kind: "ramp", x: 18, z: -25, w: 24, d: 8, h: 3, rot: -0.35 },
+          { kind: "pond", x: -38, z: 0, r: 6 }, { kind: "pond", x: 38, z: 0, r: 6 }
         ]
       }
     ];
@@ -373,6 +617,20 @@
       enemyText: document.getElementById("enemyText"),
       modeText: document.getElementById("modeText"),
       levelName: document.getElementById("levelName"),
+      startMenu: document.getElementById("startMenu"),
+      battleTab: document.getElementById("battleTab"),
+      garageTab: document.getElementById("garageTab"),
+      battlePanel: document.getElementById("battlePanel"),
+      garagePanel: document.getElementById("garagePanel"),
+      modeSelect: document.getElementById("modeSelect"),
+      mapSelect: document.getElementById("mapSelect"),
+      enemyCount: document.getElementById("enemyCount"),
+      allyCount: document.getElementById("allyCount"),
+      tankChoices: document.getElementById("tankChoices"),
+      turretChoices: document.getElementById("turretChoices"),
+      garageStartButton: document.getElementById("garageStartButton"),
+      quickJoinButton: document.getElementById("quickJoinButton"),
+      startBattleButton: document.getElementById("startBattleButton"),
       message: document.getElementById("message"),
       overlay: document.getElementById("overlay"),
       overlayTitle: document.getElementById("overlayTitle"),
@@ -511,10 +769,11 @@
     }
 
     class TankController {
-      constructor({ scene, position, team, color, wash, isPlayer = false, game, archetype = "striker" }) {
+      constructor({ scene, position, team, color, wash, isPlayer = false, game, archetype = "striker", turretType = "marker" }) {
         this.scene = scene;
         this.team = team;
         this.archetype = tankArchetypes[archetype] || tankArchetypes.striker;
+        this.turretType = turretTypes[turretType] || turretTypes.marker;
         this.color = color;
         this.wash = wash;
         this.isPlayer = isPlayer;
@@ -530,8 +789,10 @@
         this.turnSpeed = this.archetype.turnSpeed;
         this.turretTurnSpeed = this.archetype.turretTurnSpeed;
         this.fireCooldown = 0;
-        this.fireDelay = this.archetype.fireDelay * (isPlayer ? 1 : 1.25);
-        this.damage = this.archetype.damage;
+        this.fireDelay = this.turretType.fireDelay * (isPlayer ? 1 : 1.25);
+        this.damage = this.turretType.damage;
+        this.projectileScale = this.turretType.projectileScale;
+        this.splashChargeRate = this.turretType.splashCharge;
         this.health = new TankHealth(this.archetype.maxHealth * (isPlayer ? 1 : 0.7), () => this.destroy());
         this.buildMesh();
         scene.add(this.group);
@@ -570,8 +831,9 @@
         addEdges(base);
         this.turret.add(base);
 
-        const barrelLength = this.archetype.label === "Rail" ? 2.65 : this.archetype.label === "Heavy" ? 1.75 : 1.95;
-        const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.24, barrelLength), inkMat);
+        const barrelLength = this.turretType.label === "Rail Pen" ? 2.8 : this.turretType.label === "Blot Cannon" ? 2.25 : this.turretType.label === "Sprayer" ? 1.55 : 1.95;
+        const barrelWidth = this.turretType.label === "Blot Cannon" ? 0.42 : this.turretType.label === "Sprayer" ? 0.34 : 0.26;
+        const barrel = new THREE.Mesh(new THREE.BoxGeometry(barrelWidth, 0.24, barrelLength), inkMat);
         barrel.position.set(0, 0.03, -barrelLength * 0.55);
         barrel.castShadow = true;
         addEdges(barrel);
@@ -641,7 +903,7 @@
         if ((!special && this.fireCooldown > 0) || this.health.dead) return false;
         this.muzzle.getWorldPosition(tmpVec);
         const direction = new THREE.Vector3(-Math.sin(this.turretHeading), 0, -Math.cos(this.turretHeading));
-        this.game.spawnProjectile(tmpVec.clone(), direction, ownerTeam, special, this.damage);
+        this.game.spawnProjectile(tmpVec.clone(), direction, ownerTeam, special, this.damage, this.projectileScale);
         this.fireCooldown = special ? Math.max(this.fireCooldown, 0.35) : this.fireDelay;
         return true;
       }
@@ -678,7 +940,7 @@
           const turn = clamp(angleDiff(targetAngle, this.tank.heading), -1, 1);
           const throttle = distance > 8 ? 0.8 : distance < 5 ? -0.35 : 0;
           this.tank.move(dt, throttle, turn);
-          if (distance < 24 && aimError < 0.16) this.tank.fire("enemy");
+          if (distance < 24 && aimError < 0.16) this.tank.fire(this.tank.team === "enemy" ? "enemy" : "player");
         } else {
           this.stateTimer -= dt;
           if (this.stateTimer <= 0) {
@@ -703,7 +965,7 @@
     }
 
     class Projectile {
-      constructor({ scene, position, direction, owner, game, special = false, damage = 18 }) {
+      constructor({ scene, position, direction, owner, game, special = false, damage = 18, projectileScale = 1 }) {
         this.scene = scene;
         this.owner = owner;
         this.game = game;
@@ -712,7 +974,7 @@
         this.special = special;
         this.speed = special ? 13 : 20;
         this.damage = special ? 48 : damage;
-        this.radius = special ? 0.72 : 0.25;
+        this.radius = (special ? 0.72 : 0.25) * projectileScale;
         this.splashRadius = special ? 5.2 : 0;
         this.life = special ? 3.2 : 2.6;
         const projectileGroup = new THREE.Group();
@@ -814,6 +1076,16 @@
         this.objectives = [];
         this.flags = {};
         this.modeIndex = 0;
+        this.selectedTank = "striker";
+        this.selectedTurret = "marker";
+        this.gameStarted = false;
+        this.menuOpen = true;
+        this.menuSettings = {
+          mode: "Deathmatch",
+          levelIndex: 0,
+          enemies: 7,
+          allies: 2
+        };
         this.teamScore = { blue: 0, red: 0 };
         this.specialCharge = 0;
         this.spaceHeld = false;
@@ -821,16 +1093,17 @@
         this.messageTimer = 0;
         this.setupScene();
         this.bindInput();
-        this.loadLevel(0);
+        this.buildGarage();
+        this.showMenu("battle");
         this.animate();
       }
 
       setupScene() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xded8c6);
-        this.scene.fog = new THREE.Fog(0xded8c6, 28, 58);
+        this.scene.fog = new THREE.Fog(0xded8c6, 65, 150);
 
-        this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 120);
+        this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 220);
         this.camera.position.set(-8, 9, 12);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -844,17 +1117,17 @@
         this.scene.add(hemi);
 
         const sun = new THREE.DirectionalLight(0xffffff, 2.6);
-        sun.position.set(-8, 16, 10);
+        sun.position.set(-24, 34, 24);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
-        sun.shadow.camera.left = -30;
-        sun.shadow.camera.right = 30;
-        sun.shadow.camera.top = 24;
-        sun.shadow.camera.bottom = -24;
+        sun.shadow.camera.left = -85;
+        sun.shadow.camera.right = 85;
+        sun.shadow.camera.top = 60;
+        sun.shadow.camera.bottom = -60;
         this.scene.add(sun);
 
         const floor = new THREE.Mesh(
-          new THREE.PlaneGeometry(50, 34),
+          new THREE.PlaneGeometry(150, 100),
           new THREE.MeshStandardMaterial({
             map: createPaperTexture(),
             roughness: 0.95,
@@ -863,6 +1136,7 @@
         );
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
+        floor.name = "Notebook floor";
         this.scene.add(floor);
 
         const borderMat = makeMaterial(palette.ink);
@@ -894,10 +1168,81 @@
           if (event.code === "KeyN") this.loadLevel(this.levelIndex + 1);
           if (event.code === "KeyP") this.loadLevel(this.levelIndex - 1);
           if (event.code === "KeyM") this.cycleMode();
+          if (event.code === "Escape") this.showMenu("battle");
         });
         document.addEventListener("keyup", (event) => keys.delete(event.code));
         ui.restartButton.addEventListener("click", () => this.loadLevel(this.levelIndex));
         ui.nextButton.addEventListener("click", () => this.loadLevel(this.levelIndex + 1));
+        ui.battleTab.addEventListener("click", () => this.showMenu("battle"));
+        ui.garageTab.addEventListener("click", () => this.showMenu("garage"));
+        ui.garageStartButton.addEventListener("click", () => this.showMenu("garage"));
+        ui.quickJoinButton.addEventListener("click", () => this.quickJoinBattle());
+        ui.startBattleButton.addEventListener("click", () => this.startConfiguredBattle());
+      }
+
+      showMenu(tab) {
+        ui.startMenu.classList.remove("hidden");
+        this.menuOpen = true;
+        const garage = tab === "garage";
+        ui.battleTab.classList.toggle("active", !garage);
+        ui.garageTab.classList.toggle("active", garage);
+        ui.battlePanel.classList.toggle("active", !garage);
+        ui.garagePanel.classList.toggle("active", garage);
+      }
+
+      hideMenu() {
+        ui.startMenu.classList.add("hidden");
+        this.menuOpen = false;
+      }
+
+      buildGarage() {
+        ui.tankChoices.innerHTML = "";
+        for (const [id, tank] of Object.entries(tankArchetypes)) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `choice ${id === this.selectedTank ? "active" : ""}`;
+          button.dataset.choice = id;
+          button.innerHTML = `<strong>${tank.label}</strong><span>HP ${tank.maxHealth} | Speed ${tank.maxSpeed}<br>${tank.damage} base damage</span>`;
+          button.addEventListener("click", () => {
+            this.selectedTank = id;
+            this.buildGarage();
+          });
+          ui.tankChoices.appendChild(button);
+        }
+
+        ui.turretChoices.innerHTML = "";
+        for (const [id, turret] of Object.entries(turretTypes)) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `choice ${id === this.selectedTurret ? "active" : ""}`;
+          button.dataset.choice = id;
+          button.innerHTML = `<strong>${turret.label}</strong><span>${turret.description}<br>Damage ${turret.damage}</span>`;
+          button.addEventListener("click", () => {
+            this.selectedTurret = id;
+            this.buildGarage();
+          });
+          ui.turretChoices.appendChild(button);
+        }
+      }
+
+      startConfiguredBattle() {
+        this.menuSettings = {
+          mode: ui.modeSelect.value,
+          levelIndex: Number(ui.mapSelect.value),
+          enemies: clamp(Number(ui.enemyCount.value) || 1, 1, 12),
+          allies: clamp(Number(ui.allyCount.value) || 0, 0, 6)
+        };
+        this.gameStarted = true;
+        this.hideMenu();
+        this.loadLevel(this.menuSettings.levelIndex);
+      }
+
+      quickJoinBattle() {
+        ui.modeSelect.value = gameModes[Math.floor(Math.random() * gameModes.length)];
+        ui.mapSelect.value = String(Math.floor(Math.random() * levels.length));
+        ui.enemyCount.value = String(5 + Math.floor(Math.random() * 5));
+        ui.allyCount.value = ui.modeSelect.value === "Deathmatch" ? "0" : String(1 + Math.floor(Math.random() * 4));
+        this.startConfiguredBattle();
       }
 
       clearLevel() {
@@ -914,8 +1259,11 @@
 
         for (const obstacle of this.obstacles) {
           this.scene.remove(obstacle.mesh);
-          obstacle.mesh.geometry.dispose();
-          obstacle.mesh.material.dispose();
+          obstacle.mesh.traverse((child) => {
+            if (!child.isMesh) return;
+            child.geometry.dispose();
+            child.material.dispose();
+          });
         }
         this.obstacles = [];
 
@@ -938,31 +1286,14 @@
         ui.overlay.classList.remove("visible");
         this.levelIndex = (index + levels.length) % levels.length;
         const level = new LevelDefinition(levels[this.levelIndex]);
-        this.currentMode = gameModes.includes(level.mode) ? level.mode : gameModes[this.modeIndex];
+        this.currentMode = this.menuSettings.mode || level.mode || gameModes[this.modeIndex];
         ui.levelName.textContent = `Page ${this.levelIndex + 1}: ${level.name}`;
         ui.modeText.textContent = `Mode ${this.currentMode}`;
         this.teamScore = { blue: 0, red: 0 };
         this.specialCharge = 0;
 
-        for (const def of level.obstacles) {
-          const mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(def.w, def.h, def.d),
-            makeMaterial(0xede5cf)
-          );
-          mesh.position.set(def.x, def.h / 2, def.z);
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          addEdges(mesh, palette.ink);
-          this.scene.add(mesh);
-          this.obstacles.push({
-            mesh,
-            bounds: {
-              minX: def.x - def.w / 2,
-              maxX: def.x + def.w / 2,
-              minZ: def.z - def.d / 2,
-              maxZ: def.z + def.d / 2
-            }
-          });
+        for (const def of level.terrain || level.obstacles || []) {
+          this.createTerrain(def);
         }
 
         this.player = new TankController({
@@ -973,10 +1304,12 @@
           wash: palette.blueWash,
           isPlayer: true,
           game: this,
-          archetype: "striker"
+          archetype: this.selectedTank,
+          turretType: this.selectedTurret
         });
 
-        for (const enemyDef of level.enemies) {
+        const enemyDefs = this.pickSpawns(level.enemySpawns || level.enemies || [], this.menuSettings.enemies);
+        for (const enemyDef of enemyDefs) {
           const position = [enemyDef[0], enemyDef[1]];
           const tank = new TankController({
             scene: this.scene,
@@ -985,12 +1318,15 @@
             color: palette.red,
             wash: palette.redWash,
             game: this,
-            archetype: enemyDef[2] || "striker"
+            archetype: enemyDef[2] || this.randomTankType(),
+            turretType: this.randomTurretType()
           });
           this.enemies.push(new EnemyTankAI(tank, this));
         }
 
-        for (const allyDef of level.allies || []) {
+        const requestedAllies = this.currentMode === "Deathmatch" ? 0 : this.menuSettings.allies;
+        const allyDefs = this.pickSpawns(level.allySpawns || level.allies || [], requestedAllies);
+        for (const allyDef of allyDefs) {
           const tank = new TankController({
             scene: this.scene,
             position: [allyDef[0], allyDef[1]],
@@ -998,7 +1334,8 @@
             color: palette.blue,
             wash: palette.blueWash,
             game: this,
-            archetype: allyDef[2] || "scout"
+            archetype: allyDef[2] || this.randomTankType(),
+            turretType: this.randomTurretType()
           });
           this.allies.push(new EnemyTankAI(tank, this));
         }
@@ -1009,7 +1346,35 @@
         this.updateHUD();
       }
 
-      spawnProjectile(position, direction, owner, special = false, damage = 18) {
+      pickSpawns(spawns, count) {
+        const result = [];
+        if (!spawns.length) return result;
+        for (let i = 0; i < count; i++) {
+          const base = spawns[i % spawns.length];
+          if (i < spawns.length) {
+            result.push(base);
+          } else {
+            result.push([
+              clamp(base[0] + (Math.random() - 0.5) * 12, arenaBounds.minX + 8, arenaBounds.maxX - 8),
+              clamp(base[1] + (Math.random() - 0.5) * 12, arenaBounds.minZ + 8, arenaBounds.maxZ - 8),
+              base[2] || this.randomTankType()
+            ]);
+          }
+        }
+        return result;
+      }
+
+      randomTankType() {
+        const ids = Object.keys(tankArchetypes);
+        return ids[Math.floor(Math.random() * ids.length)];
+      }
+
+      randomTurretType() {
+        const ids = Object.keys(turretTypes);
+        return ids[Math.floor(Math.random() * ids.length)];
+      }
+
+      spawnProjectile(position, direction, owner, special = false, damage = 18, projectileScale = 1) {
         this.projectiles.push(new Projectile({
           scene: this.scene,
           position,
@@ -1017,7 +1382,8 @@
           owner,
           game: this,
           special,
-          damage
+          damage,
+          projectileScale
         }));
       }
 
@@ -1035,16 +1401,79 @@
         return closest;
       }
 
+      createTerrain(def) {
+        const group = new THREE.Group();
+        let mesh;
+        let blocksMovement = def.kind !== "pond";
+        let bounds;
+
+        if (def.kind === "hill") {
+          mesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(def.r, def.r * 1.25, def.h, 28),
+            makeMaterial(0xd9cfad)
+          );
+          mesh.position.set(def.x, def.h / 2, def.z);
+          mesh.scale.y = 0.82;
+          bounds = { minX: def.x - def.r * 0.85, maxX: def.x + def.r * 0.85, minZ: def.z - def.r * 0.85, maxZ: def.z + def.r * 0.85 };
+        } else if (def.kind === "ramp") {
+          mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(def.w, def.h, def.d),
+            makeMaterial(0xe6dcc1)
+          );
+          mesh.position.set(def.x, def.h / 2, def.z);
+          mesh.rotation.x = -0.18;
+          mesh.rotation.y = def.rot || 0;
+          bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
+        } else if (def.kind === "pond") {
+          mesh = new THREE.Mesh(
+            new THREE.CircleGeometry(def.r, 32),
+            new THREE.MeshBasicMaterial({ color: 0x121212, transparent: true, opacity: 0.22, side: THREE.DoubleSide })
+          );
+          mesh.rotation.x = -Math.PI / 2;
+          mesh.position.set(def.x, 0.03, def.z);
+          bounds = { minX: def.x - def.r, maxX: def.x + def.r, minZ: def.z - def.r, maxZ: def.z + def.r };
+        } else {
+          mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(def.w, def.h, def.d),
+            makeMaterial(0xede5cf)
+          );
+          mesh.position.set(def.x, def.h / 2, def.z);
+          bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
+        }
+
+        mesh.castShadow = def.kind !== "pond";
+        mesh.receiveShadow = true;
+        if (def.kind !== "pond") addEdges(mesh, palette.ink);
+        group.add(mesh);
+
+        if (def.kind === "hill") {
+          for (let i = 0; i < 4; i++) {
+            const ring = new THREE.Mesh(
+              new THREE.TorusGeometry(def.r * (0.35 + i * 0.16), 0.035, 6, 40),
+              new THREE.MeshBasicMaterial({ color: palette.ink, transparent: true, opacity: 0.24 })
+            );
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.set(def.x, def.h + 0.04 + i * 0.02, def.z);
+            group.add(ring);
+          }
+        }
+
+        this.scene.add(group);
+        if (blocksMovement) this.obstacles.push({ mesh: group, bounds });
+      }
+
       createObjectives(level) {
         const pointMat = new THREE.MeshBasicMaterial({ color: palette.blue, transparent: true, opacity: 0.18, side: THREE.DoubleSide });
-        for (const obj of level.objectives || []) {
-          const mesh = new THREE.Mesh(new THREE.CircleGeometry(obj.r, 36), pointMat.clone());
-          mesh.rotation.x = -Math.PI / 2;
-          mesh.position.set(obj.x, 0.025, obj.z);
-          this.scene.add(mesh);
-          this.objectives.push({ ...obj, mesh, owner: null, capture: 0 });
+        if (this.currentMode === "Control Points") {
+          for (const obj of level.objectives || []) {
+            const mesh = new THREE.Mesh(new THREE.CircleGeometry(obj.r, 36), pointMat.clone());
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.set(obj.x, 0.025, obj.z);
+            this.scene.add(mesh);
+            this.objectives.push({ ...obj, mesh, owner: null, capture: 0 });
+          }
         }
-        if (level.flags) {
+        if (this.currentMode === "Capture The Flag" && level.flags) {
           for (const [team, pos] of Object.entries(level.flags)) {
             const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.6, 10), makeMaterial(team === "blue" ? palette.blue : palette.red));
             pole.position.set(pos[0], 1.3, pos[1]);
@@ -1102,7 +1531,7 @@
 
         const holdingSpace = keys.has("Space");
         if (holdingSpace) {
-          this.specialCharge = clamp(this.specialCharge + dt * 0.42, 0, 1);
+          this.specialCharge = clamp(this.specialCharge + dt * this.player.splashChargeRate, 0, 1);
           if (this.specialCharge >= 1) {
             this.player.fire("player", true);
             this.specialCharge = 0;
@@ -1118,6 +1547,11 @@
 
       updateCamera(dt) {
         const tank = this.player;
+        if (!tank) {
+          this.camera.position.lerp(tmpVec.set(-34, 28, 42), 1 - Math.pow(0.005, dt));
+          this.camera.lookAt(0, 0, 0);
+          return;
+        }
         const back = new THREE.Vector3(Math.sin(tank.heading) * 11.5, 8.2, Math.cos(tank.heading) * 11.5);
         const desired = tank.group.position.clone().add(back);
         desired.y += 2.0;
@@ -1191,7 +1625,7 @@
       animate() {
         requestAnimationFrame(() => this.animate());
         const dt = Math.min(0.033, this.clock.getDelta());
-        if (!this.gameOver) {
+        if (this.gameStarted && !this.menuOpen && !this.gameOver) {
           this.updatePlayer(dt);
           for (const enemy of this.enemies) enemy.update(dt);
           for (const ally of this.allies) ally.update(dt);
@@ -1200,7 +1634,7 @@
           this.checkEndState();
         }
         this.updateCamera(dt);
-        this.updateHUD();
+        if (this.player) this.updateHUD();
         if (this.messageTimer > 0) {
           this.messageTimer -= dt;
           if (this.messageTimer <= 0) ui.message.classList.remove("visible");

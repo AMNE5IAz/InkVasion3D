@@ -6,6 +6,11 @@ Inkvasion is now a browser-playable 3D ink tank arena game. Pilot a blue sketch 
 
 Open `index.html` in a modern browser. The game is static and can be hosted directly on Vercel, GitHub Pages, or any static host.
 
+The first screen is now a menu:
+
+- **Battles:** create a battle or quick join one, choose the mode, map, enemy count, and teammate count.
+- **Garage:** choose your tank hull and turret before launching.
+
 ## Controls
 
 - Move: `W/A/S/D` or arrow keys
@@ -15,13 +20,16 @@ Open `index.html` in a modern browser. The game is static and can be hosted dire
 - Restart current page: `R`
 - Next/previous page: `N` / `P`
 - Switch mode label: `M`
+- Open menu / pause setup: `Esc`
 
 ## Gameplay
 
 - Third-person 3D arena camera inspired by arcade tank battlers.
 - Four larger sketchbook arenas built for exploration and cover: Ink Wastes, Folded City, Blot Flag Basin, and Three Point Spillway.
+- Maps now include walls, hills, ramps, raised paper structures, ink ponds, bases, and control zones.
 - Game mode rules inspired by arena tank games: Deathmatch, Team Deathmatch, Capture The Flag, and Control Points.
 - Diverse tank archetypes: Striker, Scout, Heavy, and Rail-style enemies with different health, speed, barrels, and damage.
+- Garage turret choices: Marker, Sprayer, Blot Cannon, and Rail Pen.
 - Enemy tanks patrol, detect the player with line-of-sight, chase, aim, and fire.
 - Projectiles damage tanks and leave ink splatter marks on impact.
 - Victory depends on the mode: erase enemies, soak the flag, or capture all control points.

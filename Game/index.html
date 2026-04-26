@@ -358,6 +358,79 @@
       padding: 0 22px 22px;
     }
 
+    .battle-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .battle-card {
+      border: 2px solid rgba(24, 23, 21, 0.72);
+      background: #fffdf4;
+      padding: 12px;
+      box-shadow: 4px 4px 0 rgba(24, 23, 21, 0.1);
+    }
+
+    .battle-card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .battle-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .preview {
+      position: relative;
+      height: 54px;
+      margin-bottom: 8px;
+      border: 1px dashed rgba(24, 23, 21, 0.35);
+      background: repeating-linear-gradient(0deg, rgba(10, 104, 216, 0.08), rgba(10, 104, 216, 0.08) 1px, transparent 1px, transparent 14px);
+      overflow: hidden;
+    }
+
+    .preview-tank::before,
+    .preview-tank::after,
+    .preview-turret::before,
+    .preview-turret::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 2px solid var(--ink);
+      background: rgba(10, 104, 216, 0.22);
+    }
+
+    .preview-tank::before {
+      width: var(--tank-w, 54px);
+      height: var(--tank-h, 28px);
+    }
+
+    .preview-tank::after {
+      width: 28px;
+      height: 16px;
+      background: var(--blue);
+    }
+
+    .preview-turret::before {
+      width: 34px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(10, 104, 216, 0.28);
+    }
+
+    .preview-turret::after {
+      width: var(--barrel-l, 54px);
+      height: var(--barrel-w, 8px);
+      left: calc(50% + var(--barrel-l, 54px) / 2);
+      background: var(--blue);
+    }
+
     @media (max-width: 740px) {
       #hud {
         grid-template-columns: 1fr;
@@ -388,7 +461,8 @@
       }
 
       .menu-panel,
-      .choice-grid {
+      .choice-grid,
+      .battle-list {
         grid-template-columns: 1fr;
       }
     }
@@ -412,7 +486,7 @@
       <span id="enemyText" class="stat">Enemies 0</span>
       <span id="modeText" class="stat">Mode Deathmatch</span>
       <span class="stat">Hold Space: Splash</span>
-      <span class="stat">M Mode</span>
+      <span class="stat">Esc Menu</span>
     </div>
   </section>
 
@@ -472,9 +546,25 @@
           <label for="allyCount">Team members</label>
           <input id="allyCount" type="number" min="0" max="6" value="2">
         </div>
+        <div class="setting-card">
+          <label for="flagLimit">Flags to win</label>
+          <input id="flagLimit" type="number" min="1" max="9" value="3">
+        </div>
+        <div class="setting-card">
+          <label for="timeLimit">Time limit (minutes)</label>
+          <input id="timeLimit" type="number" min="1" max="60" value="8">
+        </div>
+        <div class="setting-card">
+          <label for="pointLimit">Point score to win</label>
+          <input id="pointLimit" type="number" min="50" max="1000" value="200">
+        </div>
         <div class="setting-card wide">
           <p class="setting-title">Battle shape</p>
-          <p class="menu-subtitle" style="max-width:none;text-align:left">Deathmatch ignores team members. Team modes spawn blue allies and red enemies. Capture The Flag places bases at opposite sides, while Control Points adds capturable ink zones around the map.</p>
+          <p class="menu-subtitle" style="max-width:none;text-align:left">Create a battle, then join it from the battle list. Team modes lock in team size. Capture The Flag uses flag captures to win. Control Points uses timed scoring zones. Deathmatch is everyone against everyone.</p>
+        </div>
+        <div class="setting-card wide">
+          <p class="setting-title">Created battles</p>
+          <div id="battleList" class="battle-list"></div>
         </div>
       </div>
 
@@ -512,7 +602,9 @@
     const keys = new Set();
     const tmpVec = new THREE.Vector3();
     const tmpVec2 = new THREE.Vector3();
-    const arenaBounds = { minX: -70, maxX: 70, minZ: -46, maxZ: 46 };
+    const WORLD_SCALE = 10;
+    const SPEED_SCALE = 5.5;
+    const arenaBounds = { minX: -700, maxX: 700, minZ: -460, maxZ: 460 };
 
     const palette = {
       paper: 0xf5f0df,
@@ -539,6 +631,17 @@
       sprayer: { label: "Sprayer", fireDelay: 0.24, damage: 10, projectileScale: 0.82, splashCharge: 0.55, description: "Fast firing, lighter damage, quickest splash charge." },
       cannon: { label: "Blot Cannon", fireDelay: 0.86, damage: 34, projectileScale: 1.25, splashCharge: 0.34, description: "Slow heavy ink drops with big hit pressure." },
       railpen: { label: "Rail Pen", fireDelay: 1.16, damage: 48, projectileScale: 0.78, splashCharge: 0.28, description: "Precise long-range ink punctures." }
+    };
+
+    const garagePreviewVars = {
+      striker: "--tank-w:54px;--tank-h:28px",
+      scout: "--tank-w:44px;--tank-h:23px",
+      heavy: "--tank-w:66px;--tank-h:34px",
+      rail: "--tank-w:50px;--tank-h:25px",
+      marker: "--barrel-l:52px;--barrel-w:8px",
+      sprayer: "--barrel-l:38px;--barrel-w:13px",
+      cannon: "--barrel-l:58px;--barrel-w:16px",
+      railpen: "--barrel-l:72px;--barrel-w:6px"
     };
 
     const levels = [
@@ -626,6 +729,10 @@
       mapSelect: document.getElementById("mapSelect"),
       enemyCount: document.getElementById("enemyCount"),
       allyCount: document.getElementById("allyCount"),
+      flagLimit: document.getElementById("flagLimit"),
+      timeLimit: document.getElementById("timeLimit"),
+      pointLimit: document.getElementById("pointLimit"),
+      battleList: document.getElementById("battleList"),
       tankChoices: document.getElementById("tankChoices"),
       turretChoices: document.getElementById("turretChoices"),
       garageStartButton: document.getElementById("garageStartButton"),
@@ -652,6 +759,47 @@
 
     function angleDiff(target, current) {
       return normalizeAngle(target - current);
+    }
+
+    function scaledPoint(point) {
+      return [point[0] * WORLD_SCALE, point[1] * WORLD_SCALE, point[2]];
+    }
+
+    function scaleTerrain(def) {
+      const scaled = { ...def };
+      for (const key of ["x", "z", "w", "d", "r"]) {
+        if (typeof scaled[key] === "number") scaled[key] *= WORLD_SCALE;
+      }
+      if (typeof scaled.h === "number") scaled.h *= Math.min(WORLD_SCALE * 0.42, 5);
+      return scaled;
+    }
+
+    function expandedLevel(level) {
+      const terrain = (level.terrain || []).map(scaleTerrain);
+      const kinds = ["building", "eraser", "penholder", "sharpener"];
+      for (let ix = -2; ix <= 2; ix++) {
+        for (let iz = -2; iz <= 2; iz++) {
+          if (ix === 0 && iz === 0) continue;
+          const x = ix * 210 + ((iz % 2) * 38);
+          const z = iz * 145 + ((ix % 2) * 29);
+          terrain.push({ kind: kinds[Math.abs(ix + iz) % kinds.length], x, z, w: 45 + Math.abs(ix) * 10, d: 34 + Math.abs(iz) * 8, h: 16 + Math.abs(ix - iz) * 4, rot: (ix - iz) * 0.16 });
+          terrain.push({ kind: "wall", x: x + 75, z: z - 48, w: 96, d: 12, h: 18, rot: (ix + iz) * 0.08 });
+          if ((ix + iz) % 2 === 0) terrain.push({ kind: "hill", x: x - 82, z: z + 52, r: 46, h: 20 });
+        }
+      }
+      terrain.push({ kind: "river", x: 0, z: -180, w: 1320, d: 36, h: 0.08 });
+      terrain.push({ kind: "river", x: -240, z: 145, w: 42, d: 680, h: 0.08 });
+      terrain.push({ kind: "bridge", x: -240, z: 145, w: 96, d: 58, h: 2.4 });
+      terrain.push({ kind: "bridge", x: 135, z: -180, w: 110, d: 58, h: 2.4 });
+      return {
+        ...level,
+        player: scaledPoint(level.player),
+        enemySpawns: (level.enemySpawns || []).map(scaledPoint),
+        allySpawns: (level.allySpawns || []).map(scaledPoint),
+        objectives: (level.objectives || []).map((obj) => ({ ...obj, x: obj.x * WORLD_SCALE, z: obj.z * WORLD_SCALE, r: obj.r * WORLD_SCALE * 0.75 })),
+        flags: level.flags ? Object.fromEntries(Object.entries(level.flags).map(([team, point]) => [team, scaledPoint(point)])) : null,
+        terrain
+      };
     }
 
     function createPaperTexture() {
@@ -683,7 +831,7 @@
       const texture = new THREE.CanvasTexture(canvas);
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(2, 2);
+      texture.repeat.set(24, 16);
       texture.colorSpace = THREE.SRGBColorSpace;
       return texture;
     }
@@ -784,8 +932,8 @@
         this.turretHeading = this.heading;
         this.speed = 0;
         this.radius = 1.1;
-        this.maxSpeed = this.archetype.maxSpeed * (isPlayer ? 1 : 0.82);
-        this.acceleration = this.archetype.acceleration * (isPlayer ? 1 : 0.8);
+        this.maxSpeed = this.archetype.maxSpeed * SPEED_SCALE * (isPlayer ? 1 : 0.88);
+        this.acceleration = this.archetype.acceleration * SPEED_SCALE * (isPlayer ? 1 : 0.88);
         this.turnSpeed = this.archetype.turnSpeed;
         this.turretTurnSpeed = this.archetype.turretTurnSpeed;
         this.fireCooldown = 0;
@@ -872,7 +1020,9 @@
         this.speed *= throttle === 0 ? Math.pow(0.16, dt) : Math.pow(0.72, dt);
         this.speed = clamp(this.speed, -this.maxSpeed * 0.55, this.maxSpeed);
         if (Math.abs(this.speed) > 0.08) {
-          this.heading = normalizeAngle(this.heading + steering * this.turnSpeed * dt * Math.sign(this.speed));
+          const turnDelta = steering * this.turnSpeed * dt * Math.sign(this.speed);
+          this.heading = normalizeAngle(this.heading + turnDelta);
+          this.turretHeading = normalizeAngle(this.turretHeading + turnDelta);
         }
 
         const next = this.group.position.clone();
@@ -919,48 +1069,89 @@
         this.tank = tank;
         this.game = game;
         this.stateTimer = Math.random() * 2;
-        this.patrolAngle = Math.random() * TAU;
+        this.stuckTimer = 0;
+        this.lastPosition = tank.group.position.clone();
+        this.waypoint = this.pickWaypoint();
       }
 
       update(dt) {
         if (this.tank.health.dead || this.game.player.health.dead) return;
         const targetTank = this.tank.team === "ally"
           ? this.game.closestLivingEnemy(this.tank.group.position)
-          : this.game.player;
+          : this.game.pickTargetForEnemy(this.tank);
         if (!targetTank) return;
-        const player = targetTank;
         const enemyPos = this.tank.group.position;
-        const playerPos = player.group.position;
+        const playerPos = targetTank.group.position;
         const distance = enemyPos.distanceTo(playerPos);
-        const canSee = distance < 18 && !lineBlocked(enemyPos, playerPos, this.game.obstacles);
+        const canSee = distance < 230 && !lineBlocked(enemyPos, playerPos, this.game.obstacles);
 
         if (canSee) {
           const aimError = this.tank.aimTurretAt(playerPos, dt, 1.15);
           const targetAngle = Math.atan2(enemyPos.x - playerPos.x, enemyPos.z - playerPos.z);
-          const turn = clamp(angleDiff(targetAngle, this.tank.heading), -1, 1);
-          const throttle = distance > 8 ? 0.8 : distance < 5 ? -0.35 : 0;
+          const avoided = this.avoidanceTurn(targetAngle);
+          const turn = clamp(angleDiff(avoided, this.tank.heading), -1, 1);
+          const throttle = distance > 92 ? 0.86 : distance < 42 ? -0.35 : 0.38;
           this.tank.move(dt, throttle, turn);
-          if (distance < 24 && aimError < 0.16) this.tank.fire(this.tank.team === "enemy" ? "enemy" : "player");
+          if (distance < 190 && aimError < 0.16) this.tank.fire(this.tank.team === "enemy" ? "enemy" : "player");
         } else {
-          this.stateTimer -= dt;
-          if (this.stateTimer <= 0) {
-            this.stateTimer = 1.2 + Math.random() * 2.2;
-            this.patrolAngle = Math.random() * TAU;
-          }
-          const turn = clamp(angleDiff(this.patrolAngle, this.tank.heading), -0.8, 0.8);
-          this.tank.move(dt, 0.42, turn);
-          this.tank.aimTurretAt(
-            tmpVec.set(
-              enemyPos.x - Math.sin(this.tank.heading) * 5,
-              enemyPos.y,
-              enemyPos.z - Math.cos(this.tank.heading) * 5
-            ),
-            dt,
-            0.6
-          );
+          this.patrol(dt);
         }
 
+        this.recoverIfStuck(dt);
+
         this.tank.update(dt);
+      }
+
+      pickWaypoint() {
+        const margin = 80;
+        return new THREE.Vector3(
+          arenaBounds.minX + margin + Math.random() * (arenaBounds.maxX - arenaBounds.minX - margin * 2),
+          0,
+          arenaBounds.minZ + margin + Math.random() * (arenaBounds.maxZ - arenaBounds.minZ - margin * 2)
+        );
+      }
+
+      patrol(dt) {
+        const pos = this.tank.group.position;
+        const strategic = this.game.strategicWaypointFor(this.tank);
+        if (strategic) this.waypoint.copy(strategic);
+        if (pos.distanceTo(this.waypoint) < 38 || this.stateTimer <= 0) {
+          this.waypoint = strategic ? strategic.clone() : this.pickWaypoint();
+          this.stateTimer = 4 + Math.random() * 6;
+        }
+        this.stateTimer -= dt;
+        const desired = Math.atan2(pos.x - this.waypoint.x, pos.z - this.waypoint.z);
+        const avoided = this.avoidanceTurn(desired);
+        const turn = clamp(angleDiff(avoided, this.tank.heading), -0.9, 0.9);
+        this.tank.move(dt, 0.62, turn);
+        this.tank.aimTurretAt(this.waypoint, dt, 0.75);
+      }
+
+      avoidanceTurn(desiredAngle) {
+        const pos = this.tank.group.position;
+        const feelers = [desiredAngle, desiredAngle + 0.55, desiredAngle - 0.55, desiredAngle + 1.1, desiredAngle - 1.1];
+        for (const angle of feelers) {
+          tmpVec.set(pos.x - Math.sin(angle) * 38, pos.y, pos.z - Math.cos(angle) * 38);
+          if (!positionBlocked(tmpVec, this.tank.radius * 1.5, this.game.obstacles)) return angle;
+        }
+        return desiredAngle + Math.PI * 0.65;
+      }
+
+      recoverIfStuck(dt) {
+        const moved = this.tank.group.position.distanceTo(this.lastPosition);
+        if (moved < 0.15 && Math.abs(this.tank.speed) > 2) {
+          this.stuckTimer += dt;
+        } else {
+          this.stuckTimer = Math.max(0, this.stuckTimer - dt * 2);
+        }
+        if (this.stuckTimer > 0.8) {
+          this.waypoint = this.pickWaypoint();
+          this.tank.heading = normalizeAngle(this.tank.heading + Math.PI * (0.6 + Math.random() * 0.5));
+          this.tank.turretHeading = this.tank.heading;
+          this.tank.speed = -this.tank.maxSpeed * 0.25;
+          this.stuckTimer = 0;
+        }
+        this.lastPosition.copy(this.tank.group.position);
       }
     }
 
@@ -972,11 +1163,11 @@
         this.position = position.clone();
         this.direction = direction.clone().normalize();
         this.special = special;
-        this.speed = special ? 13 : 20;
+        this.speed = (special ? 13 : 20) * SPEED_SCALE;
         this.damage = special ? 48 : damage;
         this.radius = (special ? 0.72 : 0.25) * projectileScale;
-        this.splashRadius = special ? 5.2 : 0;
-        this.life = special ? 3.2 : 2.6;
+        this.splashRadius = special ? 5.2 * WORLD_SCALE : 0;
+        this.life = special ? 5.5 : 4.6;
         const projectileGroup = new THREE.Group();
         const drop = new THREE.Mesh(
           new THREE.SphereGeometry(this.radius, 18, 12),
@@ -1020,7 +1211,11 @@
           }
         }
 
-        const targets = this.owner === "player" ? this.game.enemies.map((enemy) => enemy.tank) : [this.game.player];
+        const targets = this.owner === "player"
+          ? this.game.enemies.map((enemy) => enemy.tank)
+          : this.game.currentMode === "Deathmatch"
+            ? [this.game.player, ...this.game.enemies.map((enemy) => enemy.tank)]
+            : [this.game.player, ...this.game.allies.map((ally) => ally.tank)];
         for (const target of targets) {
           if (target.health.dead) continue;
           if (this.position.distanceTo(target.group.position) < target.radius + this.radius) {
@@ -1080,11 +1275,21 @@
         this.selectedTurret = "marker";
         this.gameStarted = false;
         this.menuOpen = true;
+        this.battles = [];
+        this.activeBattle = null;
+        this.matchTimeRemaining = 0;
+        this.flagCaptures = { blue: 0, red: 0 };
+        this.pointScores = { blue: 0, red: 0 };
+        this.activePointIndex = 0;
+        this.pointRelocateTimer = 0;
         this.menuSettings = {
           mode: "Deathmatch",
           levelIndex: 0,
           enemies: 7,
-          allies: 2
+          allies: 2,
+          flagLimit: 3,
+          timeLimit: 8,
+          pointLimit: 200
         };
         this.teamScore = { blue: 0, red: 0 };
         this.specialCharge = 0;
@@ -1094,6 +1299,7 @@
         this.setupScene();
         this.bindInput();
         this.buildGarage();
+        this.renderBattleList();
         this.showMenu("battle");
         this.animate();
       }
@@ -1101,9 +1307,9 @@
       setupScene() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0xded8c6);
-        this.scene.fog = new THREE.Fog(0xded8c6, 65, 150);
+        this.scene.fog = new THREE.Fog(0xded8c6, 600, 1800);
 
-        this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 220);
+        this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 2600);
         this.camera.position.set(-8, 9, 12);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -1120,14 +1326,14 @@
         sun.position.set(-24, 34, 24);
         sun.castShadow = true;
         sun.shadow.mapSize.set(2048, 2048);
-        sun.shadow.camera.left = -85;
-        sun.shadow.camera.right = 85;
-        sun.shadow.camera.top = 60;
-        sun.shadow.camera.bottom = -60;
+        sun.shadow.camera.left = -900;
+        sun.shadow.camera.right = 900;
+        sun.shadow.camera.top = 650;
+        sun.shadow.camera.bottom = -650;
         this.scene.add(sun);
 
         const floor = new THREE.Mesh(
-          new THREE.PlaneGeometry(150, 100),
+          new THREE.PlaneGeometry(1500, 1000),
           new THREE.MeshStandardMaterial({
             map: createPaperTexture(),
             roughness: 0.95,
@@ -1164,10 +1370,7 @@
           if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
             event.preventDefault();
           }
-          if (event.code === "KeyR") this.loadLevel(this.levelIndex);
-          if (event.code === "KeyN") this.loadLevel(this.levelIndex + 1);
-          if (event.code === "KeyP") this.loadLevel(this.levelIndex - 1);
-          if (event.code === "KeyM") this.cycleMode();
+          if (event.code === "KeyR" && this.activeBattle) this.joinBattle(this.activeBattle.id);
           if (event.code === "Escape") this.showMenu("battle");
         });
         document.addEventListener("keyup", (event) => keys.delete(event.code));
@@ -1177,7 +1380,7 @@
         ui.garageTab.addEventListener("click", () => this.showMenu("garage"));
         ui.garageStartButton.addEventListener("click", () => this.showMenu("garage"));
         ui.quickJoinButton.addEventListener("click", () => this.quickJoinBattle());
-        ui.startBattleButton.addEventListener("click", () => this.startConfiguredBattle());
+        ui.startBattleButton.addEventListener("click", () => this.createBattleFromSettings());
       }
 
       showMenu(tab) {
@@ -1202,7 +1405,7 @@
           button.type = "button";
           button.className = `choice ${id === this.selectedTank ? "active" : ""}`;
           button.dataset.choice = id;
-          button.innerHTML = `<strong>${tank.label}</strong><span>HP ${tank.maxHealth} | Speed ${tank.maxSpeed}<br>${tank.damage} base damage</span>`;
+          button.innerHTML = `<div class="preview preview-tank" style="${garagePreviewVars[id]}"></div><strong>${tank.label}</strong><span>HP ${tank.maxHealth} | Speed ${tank.maxSpeed}<br>Different hull size in battle</span>`;
           button.addEventListener("click", () => {
             this.selectedTank = id;
             this.buildGarage();
@@ -1216,7 +1419,7 @@
           button.type = "button";
           button.className = `choice ${id === this.selectedTurret ? "active" : ""}`;
           button.dataset.choice = id;
-          button.innerHTML = `<strong>${turret.label}</strong><span>${turret.description}<br>Damage ${turret.damage}</span>`;
+          button.innerHTML = `<div class="preview preview-turret" style="${garagePreviewVars[id]}"></div><strong>${turret.label}</strong><span>${turret.description}<br>Damage ${turret.damage}</span>`;
           button.addEventListener("click", () => {
             this.selectedTurret = id;
             this.buildGarage();
@@ -1225,24 +1428,67 @@
         }
       }
 
-      startConfiguredBattle() {
-        this.menuSettings = {
+      readBattleSettings() {
+        const mode = ui.modeSelect.value;
+        const teamMode = mode !== "Deathmatch";
+        return {
+          id: `battle-${Date.now()}-${Math.floor(Math.random() * 999)}`,
           mode: ui.modeSelect.value,
           levelIndex: Number(ui.mapSelect.value),
           enemies: clamp(Number(ui.enemyCount.value) || 1, 1, 12),
-          allies: clamp(Number(ui.allyCount.value) || 0, 0, 6)
+          allies: teamMode ? clamp(Number(ui.allyCount.value) || 0, 1, 6) : 0,
+          flagLimit: clamp(Number(ui.flagLimit.value) || 3, 1, 9),
+          timeLimit: clamp(Number(ui.timeLimit.value) || 8, 1, 60),
+          pointLimit: clamp(Number(ui.pointLimit.value) || 200, 50, 1000),
+          createdAt: new Date().toLocaleTimeString()
         };
-        this.gameStarted = true;
-        this.hideMenu();
-        this.loadLevel(this.menuSettings.levelIndex);
+      }
+
+      createBattleFromSettings() {
+        const battle = this.readBattleSettings();
+        this.battles.unshift(battle);
+        this.renderBattleList();
+        this.showMessage(`Created ${battle.mode} on ${levels[battle.levelIndex].name}. Join it from the list.`);
       }
 
       quickJoinBattle() {
-        ui.modeSelect.value = gameModes[Math.floor(Math.random() * gameModes.length)];
-        ui.mapSelect.value = String(Math.floor(Math.random() * levels.length));
-        ui.enemyCount.value = String(5 + Math.floor(Math.random() * 5));
-        ui.allyCount.value = ui.modeSelect.value === "Deathmatch" ? "0" : String(1 + Math.floor(Math.random() * 4));
-        this.startConfiguredBattle();
+        if (this.battles.length === 0) this.createBattleFromSettings();
+        this.joinBattle(this.battles[0].id);
+      }
+
+      renderBattleList() {
+        ui.battleList.innerHTML = "";
+        if (this.battles.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "menu-subtitle";
+          empty.style.maxWidth = "none";
+          empty.style.textAlign = "left";
+          empty.textContent = "No battles yet. Create one above, then join it here.";
+          ui.battleList.appendChild(empty);
+          return;
+        }
+        for (const battle of this.battles) {
+          const level = levels[battle.levelIndex];
+          const card = document.createElement("article");
+          card.className = "battle-card";
+          card.innerHTML = `<h3>${battle.mode}</h3><p>${level.name} | Enemies ${battle.enemies} | Team ${battle.allies}<br>Time ${battle.timeLimit}m | Flags ${battle.flagLimit} | Points ${battle.pointLimit}<br>Created ${battle.createdAt}</p>`;
+          const join = document.createElement("button");
+          join.type = "button";
+          join.textContent = "Join";
+          join.addEventListener("click", () => this.joinBattle(battle.id));
+          card.appendChild(join);
+          ui.battleList.appendChild(card);
+        }
+      }
+
+      joinBattle(id) {
+        const battle = this.battles.find((item) => item.id === id);
+        if (!battle) return;
+        this.activeBattle = { ...battle };
+        this.menuSettings = { ...battle };
+        this.gameStarted = true;
+        this.hideMenu();
+        this.loadLevel(battle.levelIndex);
       }
 
       clearLevel() {
@@ -1285,11 +1531,16 @@
         this.gameOver = false;
         ui.overlay.classList.remove("visible");
         this.levelIndex = (index + levels.length) % levels.length;
-        const level = new LevelDefinition(levels[this.levelIndex]);
+        const level = new LevelDefinition(expandedLevel(levels[this.levelIndex]));
         this.currentMode = this.menuSettings.mode || level.mode || gameModes[this.modeIndex];
         ui.levelName.textContent = `Page ${this.levelIndex + 1}: ${level.name}`;
         ui.modeText.textContent = `Mode ${this.currentMode}`;
         this.teamScore = { blue: 0, red: 0 };
+        this.flagCaptures = { blue: 0, red: 0 };
+        this.pointScores = { blue: 0, red: 0 };
+        this.matchTimeRemaining = (this.menuSettings.timeLimit || 8) * 60;
+        this.activePointIndex = 0;
+        this.pointRelocateTimer = 0;
         this.specialCharge = 0;
 
         for (const def of level.terrain || level.obstacles || []) {
@@ -1401,10 +1652,40 @@
         return closest;
       }
 
+      pickTargetForEnemy(enemyTank) {
+        let candidates = [this.player, ...this.allies.map((ally) => ally.tank)];
+        if (this.currentMode === "Deathmatch") {
+          candidates = [this.player, ...this.enemies.map((enemy) => enemy.tank).filter((tank) => tank !== enemyTank)];
+        }
+        candidates = candidates.filter((tank) => tank && !tank.health.dead);
+        let closest = null;
+        let closestDistance = Infinity;
+        for (const target of candidates) {
+          const dist = enemyTank.group.position.distanceTo(target.group.position);
+          if (dist < closestDistance) {
+            closest = target;
+            closestDistance = dist;
+          }
+        }
+        return closest;
+      }
+
+      strategicWaypointFor(tank) {
+        if (this.currentMode === "Capture The Flag") {
+          if (tank.team === "enemy" && this.flags.blue) return this.flags.blue.position;
+          if (tank.team === "ally" && this.flags.red) return this.flags.red.position;
+        }
+        if (this.currentMode === "Control Points" && this.objectives.length) {
+          const active = this.objectives[this.activePointIndex || 0];
+          if (active) return tmpVec2.set(active.x, 0, active.z).clone();
+        }
+        return null;
+      }
+
       createTerrain(def) {
         const group = new THREE.Group();
         let mesh;
-        let blocksMovement = def.kind !== "pond";
+        let blocksMovement = !["pond", "bridge", "river"].includes(def.kind);
         let bounds;
 
         if (def.kind === "hill") {
@@ -1424,6 +1705,20 @@
           mesh.rotation.x = -0.18;
           mesh.rotation.y = def.rot || 0;
           bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
+        } else if (def.kind === "river") {
+          mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(def.w, 0.1, def.d),
+            new THREE.MeshBasicMaterial({ color: 0x050505, transparent: true, opacity: 0.52 })
+          );
+          mesh.position.set(def.x, 0.035, def.z);
+          bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
+        } else if (def.kind === "bridge") {
+          mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(def.w, def.h, def.d),
+            makeMaterial(0xb9a37c)
+          );
+          mesh.position.set(def.x, def.h / 2 + 0.08, def.z);
+          bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
         } else if (def.kind === "pond") {
           mesh = new THREE.Mesh(
             new THREE.CircleGeometry(def.r, 32),
@@ -1432,18 +1727,28 @@
           mesh.rotation.x = -Math.PI / 2;
           mesh.position.set(def.x, 0.03, def.z);
           bounds = { minX: def.x - def.r, maxX: def.x + def.r, minZ: def.z - def.r, maxZ: def.z + def.r };
+        } else if (["building", "eraser", "penholder", "sharpener"].includes(def.kind)) {
+          const color = def.kind === "eraser" ? 0xf2b6bd : def.kind === "penholder" ? 0xc9d7e8 : def.kind === "sharpener" ? 0xd6b179 : 0xede5cf;
+          mesh = new THREE.Mesh(
+            def.kind === "penholder" ? new THREE.CylinderGeometry(def.w / 2, def.w / 2, def.h, 18) : new THREE.BoxGeometry(def.w, def.h, def.d),
+            makeMaterial(color)
+          );
+          mesh.position.set(def.x, def.h / 2, def.z);
+          mesh.rotation.y = def.rot || 0;
+          bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
         } else {
           mesh = new THREE.Mesh(
             new THREE.BoxGeometry(def.w, def.h, def.d),
             makeMaterial(0xede5cf)
           );
           mesh.position.set(def.x, def.h / 2, def.z);
+          mesh.rotation.y = def.rot || 0;
           bounds = { minX: def.x - def.w / 2, maxX: def.x + def.w / 2, minZ: def.z - def.d / 2, maxZ: def.z + def.d / 2 };
         }
 
-        mesh.castShadow = def.kind !== "pond";
+        mesh.castShadow = !["pond", "river"].includes(def.kind);
         mesh.receiveShadow = true;
-        if (def.kind !== "pond") addEdges(mesh, palette.ink);
+        if (!["pond", "river"].includes(def.kind)) addEdges(mesh, palette.ink);
         group.add(mesh);
 
         if (def.kind === "hill") {
@@ -1484,10 +1789,7 @@
       }
 
       cycleMode() {
-        this.modeIndex = (this.modeIndex + 1) % gameModes.length;
-        this.currentMode = gameModes[this.modeIndex];
-        ui.modeText.textContent = `Mode ${this.currentMode}`;
-        this.showMessage(`Mode switched to ${this.currentMode}.`);
+        this.showMessage("Mode is locked after battle creation.");
       }
 
       spawnSplatter(position, color, scale) {
@@ -1570,14 +1872,39 @@
         ui.healthFill.style.width = `${clamp(healthPct, 0, 100)}%`;
         ui.specialFill.style.width = `${Math.round(this.specialCharge * 100)}%`;
         const aliveEnemies = this.enemies.filter((enemy) => !enemy.tank.health.dead).length;
-        ui.enemyText.textContent = `Enemies ${aliveEnemies}`;
-        ui.modeText.textContent = `Mode ${this.currentMode || "Deathmatch"}`;
+        const mins = Math.max(0, Math.floor(this.matchTimeRemaining / 60));
+        const secs = Math.max(0, Math.floor(this.matchTimeRemaining % 60)).toString().padStart(2, "0");
+        ui.enemyText.textContent = `Enemies ${aliveEnemies} | ${mins}:${secs}`;
+        if (this.currentMode === "Capture The Flag") {
+          ui.modeText.textContent = `CTF ${this.flagCaptures.blue}/${this.menuSettings.flagLimit}`;
+        } else if (this.currentMode === "Control Points") {
+          ui.modeText.textContent = `Points ${Math.floor(this.pointScores.blue)}-${Math.floor(this.pointScores.red)}`;
+        } else {
+          ui.modeText.textContent = `Mode ${this.currentMode || "Deathmatch"}`;
+        }
       }
 
       updateObjectives(dt) {
         if (this.currentMode !== "Control Points") return;
+        this.pointRelocateTimer -= dt;
+        if (this.pointRelocateTimer <= 0 && this.objectives.length) {
+          this.activePointIndex = (this.activePointIndex + 1) % this.objectives.length;
+          this.pointRelocateTimer = 70;
+          this.showMessage("Control point relocated.");
+        }
         const playerPos = this.player.group.position;
-        for (const objective of this.objectives) {
+        const active = this.objectives[this.activePointIndex];
+        for (const [index, objective] of this.objectives.entries()) {
+          objective.mesh.material.opacity = index === this.activePointIndex ? 0.42 : 0.12;
+        }
+        if (!active) return;
+        const blueTanks = [this.player, ...this.allies.map((ally) => ally.tank)].filter((tank) => tank && !tank.health.dead);
+        const redTanks = this.enemies.map((enemy) => enemy.tank).filter((tank) => !tank.health.dead);
+        const blueInside = blueTanks.some((tank) => Math.hypot(tank.group.position.x - active.x, tank.group.position.z - active.z) < active.r);
+        const redInside = redTanks.some((tank) => Math.hypot(tank.group.position.x - active.x, tank.group.position.z - active.z) < active.r);
+        if (blueInside && !redInside) this.pointScores.blue += dt * 5;
+        if (redInside && !blueInside) this.pointScores.red += dt * 5;
+        for (const objective of [active]) {
           const dist = Math.hypot(playerPos.x - objective.x, playerPos.z - objective.z);
           if (dist < objective.r) {
             objective.capture = clamp(objective.capture + dt * 0.45, 0, 1);
@@ -1589,17 +1916,42 @@
 
       checkEndState() {
         if (this.gameOver) return;
+        if (this.matchTimeRemaining <= 0) {
+          if (this.currentMode === "Control Points") {
+            this.endGame(this.pointScores.blue >= this.pointScores.red ? "Victory!" : "Defeat!", `Time. Blue ${Math.floor(this.pointScores.blue)} - Red ${Math.floor(this.pointScores.red)}.`);
+          } else {
+            this.endGame("Time!", "The battle timer expired.");
+          }
+          return;
+        }
         if (this.player.health.dead) {
           this.endGame("Erased!", "Your tank was smudged out of the page.");
           return;
         }
         const aliveEnemies = this.enemies.filter((enemy) => !enemy.tank.health.dead);
-        if (this.currentMode === "Control Points" && this.objectives.length && this.objectives.every((objective) => objective.capture >= 1)) {
-          this.endGame("Victory!", "All ink control points belong to your team.");
+        if (this.currentMode === "Control Points" && this.pointScores.blue >= this.menuSettings.pointLimit) {
+          this.endGame("Victory!", "Your team controlled the ink zones long enough to win.");
           return;
         }
-        if (this.currentMode === "Capture The Flag" && this.flags.red && this.player.group.position.distanceTo(this.flags.red.position) < 3.2) {
-          this.endGame("Victory!", "Enemy flag soaked. Bring that one to the scrapbook.");
+        if (this.currentMode === "Control Points" && this.pointScores.red >= this.menuSettings.pointLimit) {
+          this.endGame("Defeat!", "The enemy team controlled the ink zones first.");
+          return;
+        }
+        if (this.currentMode === "Capture The Flag" && this.flags.blue) {
+          const redCarrier = this.enemies.find((enemy) => !enemy.tank.health.dead && enemy.tank.group.position.distanceTo(this.flags.blue.position) < 45);
+          if (redCarrier) {
+            this.flagCaptures.red += 1;
+            redCarrier.tank.group.position.set(this.flags.red.position.x, redCarrier.tank.group.position.y, this.flags.red.position.z);
+            this.showMessage(`Enemy flag capture: ${this.flagCaptures.red}/${this.menuSettings.flagLimit}`);
+            if (this.flagCaptures.red >= this.menuSettings.flagLimit) this.endGame("Defeat!", "The enemy team captured enough flags.");
+            return;
+          }
+        }
+        if (this.currentMode === "Capture The Flag" && this.flags.red && this.player.group.position.distanceTo(this.flags.red.position) < 45) {
+          this.flagCaptures.blue += 1;
+          this.player.group.position.set(this.flags.blue.position.x, this.player.group.position.y, this.flags.blue.position.z);
+          this.showMessage(`Flag captured: ${this.flagCaptures.blue}/${this.menuSettings.flagLimit}`);
+          if (this.flagCaptures.blue >= this.menuSettings.flagLimit) this.endGame("Victory!", "Your team captured enough flags.");
           return;
         }
         if (aliveEnemies.length === 0) {
@@ -1626,6 +1978,7 @@
         requestAnimationFrame(() => this.animate());
         const dt = Math.min(0.033, this.clock.getDelta());
         if (this.gameStarted && !this.menuOpen && !this.gameOver) {
+          this.matchTimeRemaining -= dt;
           this.updatePlayer(dt);
           for (const enemy of this.enemies) enemy.update(dt);
           for (const ally of this.allies) ally.update(dt);
